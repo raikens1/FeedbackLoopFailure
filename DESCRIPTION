@@ -1,0 +1,17 @@
+Package: confirmationBias
+Type: Package
+Title: Underpinning code for a study of confirmation bias
+Version: 0.1.0
+Author: Rachael C. "Rocky" Aikens
+Maintainer: Rachael C. "Rocky" Aikens <rockyaikens@gmail.com>
+Description: More about what it does (maybe more than one line)
+    Use four spaces when indenting paragraphs within the Description.
+License: GPL-3
+Encoding: UTF-8
+LazyData: true
+Imports: 
+  dplyr (>= 0.8.3),
+  magrittr (>= 1.5)
+Depends:
+  R (>= 3.4.0)
+RoxygenNote: 7.1.0

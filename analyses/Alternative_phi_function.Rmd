@@ -1,0 +1,136 @@
+---
+title: "An alternative model for diagnosis probability"
+author: "Rachael Caelie (Rocky) Aikens"
+date: "7/14/2020"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE, cache = TRUE, fig.align = "center", fig.height = 3)
+library(confirmationBias)
+library(tidyverse)
+library(ggpubr)
+library(knitr)
+library(binom)
+
+theme_set(theme_light())
+
+n <- 50000
+```
+
+# Setup
+
+## A model for Longitudinal Disease Progression
+
+Now let's imagine we're dealing with a disease that begins at a low severity and progresses every year.  We'll assume that severity progresses from 0 to 1 according to a sigmoid function with the following parameters:
+
+$$S_i(t) = \frac{1}{1 + e^{-\beta_i(t - T_i)}}.$$
+Here, $\beta_i$ and $T_i$ are intrinsic to the individual:
+
+\begin{itemize}
+  \item $\beta_i$ is the slope of progression. A larger $\beta_i$ indicates a quickly progressing disease.
+  \item $T_i$ controlls the time of onset.  $T_i$ is the time when severity reaches $0.5$
+\end{itemize}
+
+We'll simulate $\beta_i$ and $T_i$ from the following distributions:
+
+\begin{align*}
+\beta_i &\sim_{iid} \text{Beta}(\alpha = 2, \beta = 6)\\
+T_i &\sim_{iid} \text{Normal}(\mu = 50, \sigma = 5)
+\end{align*}
+
+## Model: Diagnosis rate depends on severity and baseline covariates
+
+Now, let's suppose that the probability of diagnosis depends on severity and baseline characteristics:
+
+$$\phi(S_i, X_i) = \frac{1 + \beta_2X_i}{1 + exp(-(\beta_0 + \beta_1S_i))} - c_{x_i},$$
+
+where again, $c_{x_i} = \frac{1}{1 + exp(-(\beta_0 + \beta_2X_i))}$ is a corrective constant to ensure that $\phi(0, X_i) = 0$. Also, let $\beta_2 = -\frac{1}{2}$.
+
+Inessence, this means that people with $X_i = 0$ are diagnosed in the same way as above, but people with $X_i = 1$ are diagnosed with a lower probability, shown below:
+
+```{r}
+plt_data <- expand.grid(S, c(0,1)) %>%
+  rename(S = Var1, X = Var2) %>%
+  mutate(phi = (1 - 0.5* X)/(1 + exp(-(20*S - 2.5*X - 10)))) %>%
+  mutate(X = as.factor(X))
+
+ggplot(data = plt_data, aes(x = S, y = phi, group = X, color = X)) +
+  geom_line() + xlim(c(0,1)) + ylim(c(0,1)) + coord_fixed() +
+  scale_color_brewer(palette = "Set1")
+```
+
+An example of how this plays out is shown below on a subset of the data.  People with $X = 0$ tend to be diagnosed earlier in their disease progression than people with $X = 1$.
+
+```{r}
+eg_diagnosed <- diagnose_longitudinal(eg_long, useX = T)
+
+diagnosis_pts <- eg_diagnosed %>%
+  group_by(id) %>%
+  arrange(-diagnosed, t) %>%
+  slice_head(1)
+
+ggplot(eg_diagnosed, aes(x = t, y = severity, group = id, color = as.factor(x), alpha = diagnosed)) +
+  geom_line() +
+  geom_point(data = diagnosis_pts, mapping = aes(x = t, y = severity)) +
+  scale_color_brewer(palette = "Set1")
+```
+
+```{r}
+eg_diagnosed %>%
+  group_by(id) %>%
+  mutate(cum_p_diagnosed = 1 - cumprod(1 - p_diagnose)) %>%
+  ggplot(aes(x = t, y = cum_p_diagnosed, group = id, color = as.factor(x))) +
+  geom_line() +
+  scale_color_brewer(palette = "Set1") +
+  ylab("Probability of diagnosis by time t")
+```
+
+Under this model (where diagnosis probability depends on X), let's see what we glean from a naive study of these data.
+
+```{r}
+n <- 50000
+```
+
+Let's suppose there are `r n` individuals with this disease in the EHR.  We don't observe their underlying disease state; just their diagnosis.  We also don't observe the severity of their illness prior to diagnosis.
+
+```{r generate data}
+set.seed(123)
+long_df <- generate_longitudinal(n = n)
+```
+
+```{r}
+full_long_df <- diagnose_longitudinal(long_df, useX = T)
+
+observed_long_df <- full_long_df %>%
+  filter(diagnosed == T)
+
+observed_short_df <- observed_long_df %>%
+  group_by(id) %>%
+  arrange(-diagnosed, t) %>%
+  slice_head(1)
+
+# same as observed_short_df when every individual is diagnosed
+full_short_df <- full_long_df %>%
+  group_by(id) %>%
+  arrange(-diagnosed, t) %>%
+  slice_head(1)
+```
+
+```{r}
+observed_short_df %>%
+  group_by(x) %>%
+  summarize(n = n())
+full_short_df %>%
+  group_by(x) %>%
+  summarize(n = n())
+```
+
+In this set-up, `r dim(observed_short_df)[1]` individuals out of `r n` with the disease are diagnosed.  All of the undiagnosed individuals have $X = 1$. The plot below shows the severity at onset for individuals with $x = 0$ compared to $x = 1$.  This probably is indicative of the fact that the people with $x = 0$ tend to be diagnosed at the start of their disease onset, while the people with $x = 1$ tend to be diagnosed later in their disease progression.
+
+```{r}
+ggplot(mutate(observed_short_df, x = as.factor(x)),
+       aes(x = severity, y=..density.., group = x, fill = x)) +
+  geom_histogram(position = "identity", alpha = 0.6, binwidth = 0.01) +
+  scale_fill_brewer(palette = "Set1")
+```
