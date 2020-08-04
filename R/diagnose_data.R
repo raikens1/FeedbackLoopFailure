@@ -58,7 +58,7 @@ diagnose_longitudinal <- function(df, useX = TRUE){
 #'
 #' @param x binary covariate
 #' @param severity disease severity (in [0,1])
-#' @param theta numeric vector giving parameters of diagnostic function
+#' @param theta numeric vector giving parameters of diagnostic function (default \code{c(-10, 20, -5)}s)
 #'
 #' @return
 #' @export
