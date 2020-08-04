@@ -1,0 +1,257 @@
+---
+title: "EBM Basic Simulation"
+author: "Rachael Caelie (Rocky) Aikens"
+date: "7/22/2020"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE, fig.align = "center")
+library(confirmationBias)
+library(tidyverse)
+library(ggpubr)
+library(knitr)
+library(binom)
+
+theme_set(theme_light())
+
+n <- 5000
+prev <- 0.15
+```
+
+# Set up
+
+We'll start with the basic cross-sectional model, with a single baseline characteristic, $X_i$.  Here, $X_i$ is binary and about half the population has $X_i = 1$, half has $X_i = 0$. (This could be sex, naturally, but we might consider some other discrete group like race, some comorbidity, sexuality, etc.)
+
+\begin{align*}
+    X_i &\sim_{iid} \text{Bernoulli}(0.5)\\
+    Z_i &\sim_{iid} \text{Bernoulli}(0.15)\\
+    S_i|Z_i = 1 &\sim_{iid} \text{Uniform}(0, 1)\\
+\end{align*}
+
+Where $S_i = 0$ whenever $Z_i = 0$. 
+
+Additionally let's consider that a person's probability of diagnosis depends on not only the severity of their disease but their baseline characteristics:
+
+$$D_i \sim_{iid} \text{Bernoulli}\left(\phi(S_i, X_i)\right)$$
+
+Without loss of generality, let's assume that people with $X_i = 0$ are more likely to be correctly diagnosed than people with $X_i = 1$. Explicitly, let's suppose:
+
+$$\phi(S_i, X_i) = \frac{1}{1 + exp(-(\beta_0 + \beta_1S_i + \beta_2X_i))} - c_{x_i},$$
+
+where again, $c_{x_i} = \frac{1}{1 + exp(-(\beta_0 + \beta_2X_i))}$ is a corrective constant to ensure that $\phi(0, X_i) = 0$. Let Let $\beta_0 = -10$, $\beta_1 = 20$, and $\beta_2 = -5$.
+
+Inessence, this means that people are diagnosed according to a sigmoid function, with people with $X_i = 1$ needing a higher severity to be diagnosed with the same probability as people with $X_i = 0$, shown below:
+
+```{r, fig.height=3, fig.width=3}
+S <- seq(0, 1, length.out = 100)
+
+plt_data <- expand.grid(S, c(0,1)) %>%
+  rename(S = Var1, X = Var2) %>%
+  mutate(phi = 1/(1 + exp(-(20*S - 5 * X - 10)))) %>%
+  mutate(X = as.factor(X))
+
+ggplot(data = plt_data, aes(x = S, y = phi, group = X, color = X)) +
+  geom_line() + xlim(c(0,1)) + ylim(c(0,1)) + coord_fixed() +
+  scale_color_brewer(palette = "Set1")
+```
+
+
+# A Naive Study
+
+Again, we collect a dataset of `r n`, recording the baseline characteristic $\left\{S_i, D_i, X_i\right\}_{i = 1}^n$.  Now, our researcher wants to fit a logistic model for predicting disease status from $X_i$ and $S_i$. However, since the true disease status is unkown, they use diagnosis as a proxy for disease.  In regression shorthand they want to model:
+
+$$D_i \sim S_i + X_i$$
+```{r}
+df <- generate_cross_sectional(n = n, prevalence = prev) %>%
+  diagnose_cross_sectional(useX = T)
+```
+
+The model result of such a study is shown below. 
+
+```{r}
+naive_fit <- glm(diagnosed ~ x + severity, data = df, family = "binomial")
+
+summary(naive_fit)
+
+exp(cbind(OR = coef(naive_fit), confint(naive_fit))) %>% kable(digits = 3)
+```
+
+The researcher records a very high AIC and reports that this model is quite effective at predicting who has the disease.  They write a nice paper, talking about how predictive modeling is the gateway to evidence-based personalized medicine.  Maybe they suggest that future work might leverage the Awesome Power of Machine Learning.  When they interpret their results, they might say that $X_i = 0$ significantly reduces predicted disease risk.
+
+## What's wrong with this
+
+The researcher above imagines they are fitting a model for disease risk when in fact they are fitting a model for diagnosis probability.  In fact, the model shown above is actually quite a good fit for $\phi(S_i, X_i)$. 
+
+If we actually ran a logistic regression on disease status rather than diagnosis, we would find that $X$ is not at all related to who gets the disease and who does not.
+
+```{r}
+disease_fit <- glm(disease ~ x + severity, data = df, family = "binomial")
+
+summary(disease_fit)
+
+exp(cbind(OR = coef(disease_fit), confint(disease_fit))) %>% kable(digits = 3)
+```
+
+
+## Deployment
+
+Doctors then read about this model and deploy it.  In reality, we know that doctors usualy do not do exact numeric calculations to decide what diagnosis to give, but let's suppose for a moment that they perfectly follow this published model.  In reality, some doctors will be less faithful and some more faithful.
+
+```{r}
+diagnose_from_model <- function(df, mod){
+  nrows <- dim(df)[1]
+  
+  df %>% mutate(p_diagnose = predict(mod, newdata = df, type = "response")) %>%
+    mutate(diagnosed = rbinom(nrows, size = 1, prob = p_diagnose))
+}
+
+df <- generate_cross_sectional(n = n, prevalence = prev) %>% diagnose_from_model(naive_fit)
+
+df_x1 <- filter(df, x == 1)
+df_x0 <- filter(df, x == 0)
+
+a <- df %>%
+  group_by(x) %>%
+  summarize(Prevalence = sum(disease)/n()) %>%
+  ggplot(aes(x = as.factor(x), y = Prevalence, fill = as.factor(x))) +
+  geom_col() +
+  xlab("X") +
+  labs(title = "True Prevalence", fill = "X") +
+  scale_fill_brewer(palette = "Set1") +
+  ylim(c(0,0.2))
+
+plt_data <- rbind(binom.confint(sum(df_x1$diagnose), dim(df_x1)[1], method = "asymptotic"), 
+      binom.confint(sum(df_x0$diagnose), dim(df_x0)[1], method = "asymptotic")) %>%
+  rename(diagnosed = x, Prevalence = mean) %>%
+  mutate(x = c(1, 0))
+
+b <- ggplot(plt_data, aes(x = as.factor(x), y = Prevalence, fill = as.factor(x))) +
+  geom_col() +
+  geom_errorbar(aes(ymin = lower, ymax = upper), width = 0.25) +
+  labs(title = "Estimated Prevalence", fill = "X") +
+  xlab("X") +
+  scale_fill_brewer(palette = "Set1") +
+  ylim(c(0,0.2))
+
+ggarrange(a, b, ncol = 2, nrow = 1, common.legend = T, legend = "bottom")
+```
+
+## What happens when this process is iterated
+
+Now we imagine that this is part of a learning healthcare system.  Every year, a new batch of patients comes to the hospital, and is diagnosed (or isn't).  Every year, the researchers retrain their model based on the previous year's diagnoses. The plots below suggest what happens: neither quality of care nor our understanding of the disease improves.  Our estimates of disease prevalence are just as incorrect as ever, and the misdiagnosis rates do not improve for either group.
+
+```{r}
+simulate_EBM <- function(years = 10){
+  for (i in 1:years){
+    curr_df <- generate_cross_sectional(n = n, prevalence = prev) %>%
+      mutate(study_id = i-1)
+  
+    if (i == 1){
+      curr_df <- diagnose_cross_sectional(curr_df)
+      full_df <- curr_df
+    } else{
+      curr_df <- diagnose_from_model(curr_df, curr_model)
+      full_df <- rbind(full_df, curr_df)
+    }
+  curr_model <- glm(diagnosed ~ x + severity, data = curr_df, family = "binomial")
+  }
+  return(full_df)
+}
+```
+
+```{r}
+full_df <- simulate_EBM()
+```
+
+
+```{r}
+estimate_prevalence <- function(df){
+  x_group <- df$x[1]
+  binom.confint(sum(df$diagnosed), dim(df)[1], method = "asymptotic") %>%
+    mutate(x_group = x_group) %>%
+    rename(cases = x, x = x_group)
+}
+
+plt_data <- full_df %>%
+  group_by(x, study_id) %>%
+  do(estimate_prevalence(.)) %>%
+  mutate(x = as.factor(x))
+
+ggplot(plt_data, aes(x = study_id, y = mean, group = x, color = x, fill = x)) +
+  geom_line() +
+  geom_ribbon(aes(ymin = lower, ymax = upper), alpha = 0.3, colour = NA) +
+  scale_color_brewer(palette = "Set1") +
+  scale_fill_brewer(palette = "Set1") +
+  scale_x_continuous(name = "Years of Study", breaks = 0:9) +
+  scale_y_continuous(name = "Estimated Prevalence", limits = c(0,NA))
+```
+
+```{r}
+plt_data <- full_df %>%
+  filter(disease == TRUE) %>%
+  group_by(x, study_id) %>%
+  summarize(correct_diagnosis_rate = mean(diagnosed == 1)) %>%
+  mutate(x = as.factor(x))
+
+ggplot(plt_data, aes(x = study_id, y = correct_diagnosis_rate, group = x, color = x)) +
+  geom_line() +
+  scale_color_brewer(palette = "Set1") +
+  scale_x_continuous(name = "Years of Study", breaks = 0:9) +
+  scale_y_continuous(name = "Correct Diagnosis Rate",
+                     limits = c(0,0.9),
+                     breaks = seq(0, 0.9, by = 0.1),
+                     labels = scales::percent_format(accuracy = 1))
+```
+
+## The multi-center case
+
+Now let's suppose there are multiple hospitals using a data-driven approach.  Each one trains a "diagnostic model" on it's own set of data in year 0 and each subsequent year.  The diagnostic patterns of each hospital appear as somewhat of a random walk.  A hospital which has a particularly accurrate or inaccurate diagnostic year by chance will build a particularly accurate or inaccurate model, respectively, in the following year.  Unsurprisingly, if the hospitals are very small, their diagnostic rates will vary more wildly from year to year. 
+
+```{r}
+set.seed(127)
+y <- 10
+n_centers <- 8
+n <- 1000
+
+multi_center_df <- replicate(n_centers, simulate_EBM(years = y), simplify = F) %>% 
+  bind_rows() %>%
+  mutate(hospital_id = rep(1:n_centers, each = n*y))
+```
+
+```{r}
+plt_data <- multi_center_df %>%
+  filter(disease == TRUE) %>%
+  group_by(x, study_id, hospital_id) %>%
+  summarize(correct_diagnosis_rate = mean(diagnosed == 1)) %>%
+  mutate(x = as.factor(x))
+
+a <- ggplot(filter(plt_data, x == F), aes(x = study_id,
+                                         y = correct_diagnosis_rate,
+                                         group = hospital_id,
+                                         color = as.factor(hospital_id))) +
+  geom_line() +
+  facet_wrap(~ x) +
+  scale_color_brewer(palette = "Reds") +
+  scale_x_continuous(name = "Years of Study", breaks = 0:9) +
+  scale_y_continuous(name = "Correct Diagnosis Rate",
+                     limits = c(0.1,0.8),
+                     breaks = seq(0, 0.9, by = 0.1),
+                     labels = scales::percent_format(accuracy = 1))
+
+b <- ggplot(filter(plt_data, x == T), aes(x = study_id,
+                                         y = correct_diagnosis_rate,
+                                         group = hospital_id,
+                                         color = as.factor(hospital_id))) +
+  geom_line() +
+  facet_wrap(~ x) +
+  scale_color_brewer(palette = "Blues") +
+  scale_x_continuous(name = "Years of Study", breaks = 0:9) +
+  scale_y_continuous(name = "Correct Diagnosis Rate",
+                     limits = c(0.1,0.8),
+                     breaks = seq(0, 0.9, by = 0.1),
+                     labels = scales::percent_format(accuracy = 1))
+
+ggarrange(a, b, legend = "none")
+```
+
