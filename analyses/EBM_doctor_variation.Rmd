@@ -1,0 +1,55 @@
+---
+title: "EBM with Doctor Variation"
+author: "Rachael Caelie (Rocky) Aikens"
+date: "8/3/2020"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE, fig.align = "center")
+library(confirmationBias)
+library(tidyverse)
+library(ggpubr)
+library(knitr)
+library(binom)
+
+theme_set(theme_light())
+
+n <- 5000
+prev <- 0.15
+```
+
+# Doctor variation
+
+Now let's take a doctor-centric view.  Suppose that doctors (indexed by $j$) diagnose with a probability that depends on (1) the severity of the patient's symptoms, $S_i$ (2) the patients demographics $X_i$, and (3) the parameters of their own diagnostic habits, $\boldsymbol{\theta}_j = (\beta_{0j}, \beta_{1j}, \beta_{2j})$. Explicitly, for patient $i$ seeing doctor $j$, 
+
+$$D_i \sim_{iid} \text{Bernoulli}\left(\phi(S_i, X_i, \boldsymbol{\theta}_j)\right)$$
+where, 
+
+$$\phi(S_i, X_i) = \frac{1}{1 + exp(-(\beta_{0j} + \beta_{1j}S_i + \beta_{2j}X_i))} - c_{x_i \boldsymbol{\theta_j}}.$$
+
+## Two types of doctors:
+
+Recall that an ideal diagnostic model would have $\beta_1 = \infty$ and $\beta_2 = 0$, since the only feature that really matters is the symptoms, and in this world the symptoms only emerge when the disease is present.  However, doctors aren't perfect at recognizing the symptoms of this disease.  Instead, our doctors have two patterns:
+
+\begin{align*}
+\boldsymbol{\theta_A} &= (-10, 20, 0)
+\boldsymbol{\theta_B} &= (-10, 20, -5)
+\end{align*}
+
+In other words, "A"-type doctors diagnose people based on the severity of their symptoms only, whereas "B"-type doctors diagnose $X_i = 0$ people at the same rate as A-doctors but diagnose $X_i = 1$ people at a lower rate.  In our case, we know A-doctors will have a lower misdiagnosis rate than B-doctors.
+
+## A simple doctor population
+
+Now let's imagine we have a population of 50 A-doctors and 50 B-doctors.  Each doctor sees 100 patients a year.
+
+```{r}
+generate_cross_sectional(n = 100*100, prevalence = 0.15) %>%
+  mutate(doctor_id = rep(1:100, each = 100),
+         doctor_type = rep(c("A", "B"), each = 50*100)) %>%
+  group_by(doctor_id) %>%
+  diagnose_cross_sectional(df, )
+```
+
+
+
