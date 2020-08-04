@@ -54,7 +54,6 @@ diagnose_longitudinal <- function(df, useX = TRUE){
   return(result)
 }
 
-
 #' Calculate Diagnosis Probability, depending on x
 #'
 #' @param x binary covariate
