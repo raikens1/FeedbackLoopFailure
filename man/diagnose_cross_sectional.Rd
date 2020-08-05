@@ -4,13 +4,12 @@
 \alias{diagnose_cross_sectional}
 \title{Diagnose Cross-sectional}
 \usage{
-diagnose_cross_sectional(df, useX = TRUE)
+diagnose_cross_sectional(df, theta = c(-10, 20, -5))
 }
 \arguments{
 \item{df}{cross-sectional dataset}
 
-\item{useX}{boolean, specifies whether baseline covariate should be used in
-function determining diagnosis probability}
+\item{theta, }{parameters for diagnosis function (defaul \code{c(-10, 20, -5)})}
 }
 \value{
 

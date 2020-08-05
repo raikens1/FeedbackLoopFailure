@@ -5,21 +5,15 @@
 #' Diagnose Cross-sectional
 #'
 #' @param df cross-sectional dataset
-#' @param useX boolean, specifies whether baseline covariate should be used in
-#'   function determining diagnosis probability
+#' @param theta, parameters for diagnosis function (defaul \code{c(-10, 20, -5)})
 #'
 #' @return
 #' @export
-diagnose_cross_sectional <- function(df, useX = TRUE){
+diagnose_cross_sectional <- function(df, theta = c(-10, 20, -5)){
   n_row <- dim(df)[1]
 
-  if(useX){
-    df <- mutate(df, p_diagnose = diagnosis_fn(severity, x, theta = c(-10, 20, -5)))
-  } else {
-    df <- mutate(df, p_diagnose = diagnosis_fn(severity, x, theta = c(-10, 20, 0)))
-  }
-
   result <- df %>%
+    mutate(p_diagnose = diagnosis_fn(severity, x, theta)) %>%
     mutate(diagnosed = rbinom(n_row, size = 1, p = p_diagnose))
 
   return(result)

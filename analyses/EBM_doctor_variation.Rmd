@@ -34,22 +34,154 @@ Recall that an ideal diagnostic model would have $\beta_1 = \infty$ and $\beta_2
 
 \begin{align*}
 \boldsymbol{\theta_A} &= (-10, 20, 0)
-\boldsymbol{\theta_B} &= (-10, 20, -5)
+\boldsymbol{\theta_B} &= (-10, 20, -10)
 \end{align*}
 
 In other words, "A"-type doctors diagnose people based on the severity of their symptoms only, whereas "B"-type doctors diagnose $X_i = 0$ people at the same rate as A-doctors but diagnose $X_i = 1$ people at a lower rate.  In our case, we know A-doctors will have a lower misdiagnosis rate than B-doctors.
 
 ## A simple doctor population
 
-Now let's imagine we have a population of 50 A-doctors and 50 B-doctors.  Each doctor sees 100 patients a year.
+Now let's imagine we have a population of 100 A-doctors and 100 B-doctors.  Each doctor sees 200 patients a year. A histogram rates of correct diagnosis of disease patients for each doctor is shown below, first as an aggregate, then subsetted by X.  
 
-```{r}
-generate_cross_sectional(n = 100*100, prevalence = 0.15) %>%
-  mutate(doctor_id = rep(1:100, each = 100),
-         doctor_type = rep(c("A", "B"), each = 50*100)) %>%
-  group_by(doctor_id) %>%
-  diagnose_cross_sectional(df, )
+```{r setup params}
+n_A_docs <- 100
+n_B_docs <- 100
+theta_A <- c(-10, 20, 0)
+theta_B <- c(-10, 20, -10)
+
+patients_per_doc <- 300
 ```
 
+
+```{r}
+df_A <- generate_cross_sectional(n = patients_per_doc*n_A_docs, prevalence = 0.15) %>%
+  mutate(doctor_id = rep(1:n_A_docs, each = patients_per_doc),
+         doctor_type = "A") %>%
+  diagnose_cross_sectional(theta = theta_A)
+
+df_B <- generate_cross_sectional(n = patients_per_doc*n_B_docs, prevalence = 0.15) %>%
+  mutate(doctor_id = rep((n_A_docs + 1):(n_A_docs + n_B_docs), each = patients_per_doc),
+         doctor_type = "B") %>%
+  diagnose_cross_sectional(theta = theta_B)
+
+full_df <- rbind(df_A, df_B)
+```
+
+```{r}
+full_df %>% group_by(doctor_id, doctor_type, x) %>%
+  filter(disease == T) %>%
+  summarize(correct_diagnosis_rate = mean(diagnosed == T)) %>%
+  ggplot(aes(x = correct_diagnosis_rate, y = ..density.., group = doctor_type, fill = doctor_type)) +
+  geom_histogram(position = "identity", alpha = 0.5) +
+  scale_fill_brewer(palette = "Set2", name = "Doctor Type") 
+
+full_df %>% group_by(doctor_id, doctor_type, x) %>%
+  filter(disease == T) %>%
+  summarize(correct_diagnosis_rate = mean(diagnosed == T)) %>%
+  ggplot(aes(x = correct_diagnosis_rate, y = ..density.., group = doctor_type, fill = doctor_type)) +
+  geom_histogram(position = "identity", alpha = 0.5) +
+  scale_fill_brewer(palette = "Set2", name = "Doctor Type") +
+  facet_wrap(~x) 
+```
+
+As expected, the doctors have similar diagnosis patterns when $X = 0$, but type B doctors perform much more poorly when patients with $X = 1$ are considered.
+
+## A data-driven diagnostic model
+
+```{r}
+glm(diagnosed ~ x + severity, data = rbind(df_A, df_B), family = "binomial")
+```
+
+# What happens over time
+
+Now we imagine that this is part of a learning healthcare system.  Every year, a new batch of patients comes to the hospital, and is diagnosed (or isn't).  Every year, the researchers retrain their model based on the previous year's diagnoses.
+
+```{r}
+simulate_EBM_docs_vary <- function(years = 10, evidence_rate = 0.1){
+  for (i in 1:years){
+    # generate undiagnosed data
+    curr_df_A <- df_A <- generate_cross_sectional(n = patients_per_doc*n_A_docs, prevalence = 0.15) %>%
+      mutate(doctor_id = rep(1:n_A_docs, each = patients_per_doc),
+         doctor_type = "A") %>%
+      mutate(study_id = i - 1)
+    
+    curr_df_B <- generate_cross_sectional(n = patients_per_doc*n_B_docs, prevalence = 0.15) %>%
+      mutate(doctor_id = rep((n_A_docs + 1):(n_A_docs + n_B_docs), each = patients_per_doc),
+         doctor_type = "B") %>%
+      mutate(study_id = i - 1 )
+  
+    if (i == 1){
+      # first year, let docs diagnose based on own preferences
+      curr_df_A <- diagnose_cross_sectional(curr_df_A, theta = theta_A) %>%
+        mutate(p_model = NA, p_doc = p_diagnose) %>%
+        select(x, disease, severity, doctor_id, doctor_type, study_id, p_model, p_doc, p_diagnose, diagnosed)
+      
+      full_df_A <- curr_df_A
+      
+      curr_df_B <- diagnose_cross_sectional(curr_df_B, theta = theta_B) %>%
+        mutate(p_model = NA, p_doc = p_diagnose) %>%
+        select(x, disease, severity, doctor_id, doctor_type, study_id, p_model, p_doc, p_diagnose, diagnosed)
+      
+      full_df_B <- curr_df_B
+    } else{
+      # subsequent years, docs increasingly diagnose based on model
+      evidence_weight <- (i - 1)*evidence_rate
+      
+      nrows_A <- dim(curr_df_A)[1]
+      nrows_B <- dim(curr_df_B)[1]
+      
+      # diagnose patients
+      curr_df_A <- curr_df_A %>%
+        mutate(p_model = predict(curr_model, newdata = curr_df_A, type = "response")) %>%
+        mutate(p_doc = diagnosis_fn(severity, x, theta = theta_A)) %>%
+        mutate(p_diagnose = (1 - evidence_weight)*p_doc + evidence_weight*p_model) %>%
+        mutate(diagnosed = rbinom(nrows_A, size = 1, prob = p_diagnose))
+      
+      curr_df_B <- curr_df_B %>% 
+        mutate(p_model = predict(curr_model, newdata = curr_df_B, type = "response")) %>%
+        mutate(p_doc = diagnosis_fn(severity, x, theta = theta_B)) %>%
+        mutate(p_diagnose = (1 - evidence_weight)*p_doc + evidence_weight*p_model) %>%
+        mutate(diagnosed = rbinom(nrows_B, size = 1, prob = p_diagnose))
+      
+      # store results
+      full_df_A <- rbind(full_df_A, curr_df_A)
+      full_df_B <- rbind(full_df_B, curr_df_B)
+    }
+  # build EBM model based on this year's diagnosis
+  curr_model <- glm(diagnosed ~ x + severity, data = rbind(curr_df_A, curr_df_B), family = "binomial")
+  }
+  return(rbind(full_df_A, full_df_B))
+}
+```
+
+```{r}
+n_A_docs <- 25
+n_B_docs <- 25
+theta_A <- c(-10, 20, 0)
+theta_B <- c(-10, 20, -10)
+
+patients_per_doc <- 300
+
+set.seed(123)
+time_df <- simulate_EBM_docs_vary(years = 10)
+```
+
+```{r}
+plt_data <- time_df %>%
+  filter(disease == TRUE) %>%
+  group_by(x, study_id, doctor_id, doctor_type) %>%
+  summarize(correct_diagnosis_rate = mean(diagnosed == 1)) %>%
+  mutate(x = as.factor(x))
+
+ggplot(plt_data, aes(x = study_id, y = correct_diagnosis_rate, group = doctor_id, color = doctor_type)) +
+  geom_line(alpha = 0.7) +
+  facet_wrap(~x) + 
+  scale_color_brewer(palette = "Set2", name = "Doctor Type") +
+  scale_x_continuous(name = "Years of Study", breaks = 0:9) +
+  scale_y_continuous(name = "Correct Diagnosis Rate",
+                     limits = c(0,0.9),
+                     breaks = seq(0, 0.9, by = 0.1),
+                     labels = scales::percent_format(accuracy = 1))
+```
 
 

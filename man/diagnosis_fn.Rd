@@ -11,7 +11,7 @@ diagnosis_fn(severity, x, theta = c(-10, 20, -5))
 
 \item{x}{binary covariate}
 
-\item{theta}{numeric vector giving parameters of diagnostic function}
+\item{theta}{numeric vector giving parameters of diagnostic function (default \code{c(-10, 20, -5)}s)}
 }
 \value{
 
