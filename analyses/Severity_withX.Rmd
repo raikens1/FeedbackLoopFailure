@@ -80,7 +80,7 @@ The plot below shows the true prevalence among groups (left) and the estimated p
 ```{r}
 n <- 50000
 df <- generate_cross_sectional(n = n) %>%
-  diagnose_cross_sectional(useX = T)
+  diagnose_cross_sectional()
 ```
 
 ```{r}

@@ -2,7 +2,7 @@
 % Please edit documentation in R/generate_data.R
 \name{generate_cross_sectional}
 \alias{generate_cross_sectional}
-\title{Generate Data}
+\title{Generate Cross Sectional Data}
 \usage{
 generate_cross_sectional(n = 10000, prevalence = 0.15)
 }
@@ -12,8 +12,9 @@ generate_cross_sectional(n = 10000, prevalence = 0.15)
 \item{prevalence}{disease prevalence}
 }
 \value{
-data frame of n individuals baseline binary covariate x and desease severity
+data frame of n individuals with baseline binary covariate x, disease
+  status, and continuous disease severity
 }
 \description{
-Generate Data
+Produces a model data frame for a cross-sectional study of n individuals.
 }

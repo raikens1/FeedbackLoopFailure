@@ -22,13 +22,21 @@ generate_cross_sectional <- function(n = 10000, prevalence = 0.15){
 }
 
 
-#' Generate Longitudinal
+#' Generate Longitudinal Data Set
+#'
+#' Generate a long-form longitudinal data set of n individuals, each observed at
+#' 100 time points.  Each individual has the underlying disease, with a disease
+#' severity that increases over time based on a logistic function.  The logistic
+#' function is parametrized by beta (rate of onset) and T_shift (time of onset),
+#' which varies between individuals.
 #'
 #' @param n sample size
 #'
-#' @return
+#' @return a data.frame in long-form
 #' @export
 generate_longitudinal <- function(n = 10000){
+  # TODO: this could probabily be made much faster with expand.grid(id, t =
+  # 1:100) and then joining with beta, T, and disease
   start <- data.frame(
     x = (rbinom(n, 1, 0.5) == 1),
     disease = 1,
@@ -48,7 +56,7 @@ generate_longitudinal <- function(n = 10000){
 
 #' Extend Longitudinal Data from starting parameters
 #'
-#' Helper function for generate_longitudinal
+#' Helper function for generate_longitudinal.
 #'
 #' @param row_i row of starting parameters for a single simulated subject
 #'
