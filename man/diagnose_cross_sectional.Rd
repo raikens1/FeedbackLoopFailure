@@ -2,18 +2,18 @@
 % Please edit documentation in R/diagnose_data.R
 \name{diagnose_cross_sectional}
 \alias{diagnose_cross_sectional}
-\title{Diagnose Cross-sectional}
+\title{Diagnose Cross-sectional dataset}
 \usage{
 diagnose_cross_sectional(df, theta = c(-10, 20, -5))
 }
 \arguments{
 \item{df}{cross-sectional dataset}
 
-\item{theta, }{parameters for diagnosis function (defaul \code{c(-10, 20, -5)})}
+\item{theta, }{parameters for diagnosis function}
 }
 \value{
-
+diagnosed cross_sectional data set.
 }
 \description{
-Diagnose Cross-sectional
+Add diagnosis labels (0 or 1) to each individual in a cross-sectional dataset
 }

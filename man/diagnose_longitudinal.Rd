@@ -2,19 +2,20 @@
 % Please edit documentation in R/diagnose_data.R
 \name{diagnose_longitudinal}
 \alias{diagnose_longitudinal}
-\title{Diagnose Longitudinal}
+\title{Diagnose Longitudinal Data Set}
 \usage{
-diagnose_longitudinal(df, useX = TRUE)
+diagnose_longitudinal(df, theta = c(-10, 20, -5))
 }
 \arguments{
 \item{df}{longitudinal dataset}
 
-\item{useX}{boolean, specifies whether baseline covariate should be used in
-function determining diagnosis probability}
+\item{theta}{parameters for diagnosis function}
 }
 \value{
-
+diagnosed longitudinal data set.
 }
 \description{
-Diagnose Longitudinal
+At each time point for each individual, calculate probability of diagnosis
+using diagnosis_fn.  If that individual is not yet diagnosed, check if a new
+diagnosis would happen at this time point based on the diagnosis probability.
 }

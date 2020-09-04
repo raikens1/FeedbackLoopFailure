@@ -57,14 +57,14 @@ ggplot(data = plt_data, aes(x = S, y = phi, group = X, color = X)) +
 ```
 
 
-# A Naive Study
+# A Naive Predictive Modeling Study
 
 Again, we collect a dataset of `r n`, recording the baseline characteristic $\left\{S_i, D_i, X_i\right\}_{i = 1}^n$.  Now, our researcher wants to fit a logistic model for predicting disease status from $X_i$ and $S_i$. However, since the true disease status is unkown, they use diagnosis as a proxy for disease.  In regression shorthand they want to model:
 
 $$D_i \sim S_i + X_i$$
 ```{r}
 df <- generate_cross_sectional(n = n, prevalence = prev) %>%
-  diagnose_cross_sectional(useX = T)
+  diagnose_cross_sectional()
 ```
 
 The model result of such a study is shown below. 
@@ -96,7 +96,9 @@ exp(cbind(OR = coef(disease_fit), confint(disease_fit))) %>% kable(digits = 3)
 
 ## Deployment
 
-Doctors then read about this model and deploy it.  In reality, we know that doctors usualy do not do exact numeric calculations to decide what diagnosis to give, but let's suppose for a moment that they perfectly follow this published model.  In reality, some doctors will be less faithful and some more faithful.
+Nonetheless, the naive model is published.  Perhaps it is deployed as a "risk score" calculator with the objective of informing doctor's diagnosis. Doctors then read about this model and deploy it.  In reality, we know that doctors usualy do not do exact numeric calculations to decide what diagnosis to give, but let's suppose for the moment that they perfectly follow this published model.  In reality, some doctors will be less faithful and some more faithful.
+
+As shown below, the misdiagnosis rates prior to the model being deployed are essentially identical to the misdiagnosis rates when doctors follow the model exactly.
 
 ```{r}
 diagnose_from_model <- function(df, mod){
@@ -106,40 +108,42 @@ diagnose_from_model <- function(df, mod){
     mutate(diagnosed = rbinom(nrows, size = 1, prob = p_diagnose))
 }
 
-df <- generate_cross_sectional(n = n, prevalence = prev) %>% diagnose_from_model(naive_fit)
-
-df_x1 <- filter(df, x == 1)
-df_x0 <- filter(df, x == 0)
+EBM_df <- generate_cross_sectional(n = n, prevalence = prev) %>% diagnose_from_model(naive_fit)
 
 a <- df %>%
+  filter(disease == T) %>%
   group_by(x) %>%
-  summarize(Prevalence = sum(disease)/n()) %>%
-  ggplot(aes(x = as.factor(x), y = Prevalence, fill = as.factor(x))) +
-  geom_col() +
-  xlab("X") +
-  labs(title = "True Prevalence", fill = "X") +
-  scale_fill_brewer(palette = "Set1") +
-  ylim(c(0,0.2))
+  summarize(correct_diagnosis_rate = mean(diagnosed)) %>%
+  ggplot(aes(x = x, y = correct_diagnosis_rate, fill = x)) +
+  geom_col() + 
+  scale_fill_brewer(palette = "Set1") + 
+  scale_y_continuous(name = "Correct Diagnosis Rate",
+                   limits = c(0,0.9),
+                   breaks = seq(0, 1, by = 0.1),
+                   labels = scales::percent_format(accuracy = 1)) +
+  labs(title = "Before Model Deployment")
 
-plt_data <- rbind(binom.confint(sum(df_x1$diagnose), dim(df_x1)[1], method = "asymptotic"), 
-      binom.confint(sum(df_x0$diagnose), dim(df_x0)[1], method = "asymptotic")) %>%
-  rename(diagnosed = x, Prevalence = mean) %>%
-  mutate(x = c(1, 0))
-
-b <- ggplot(plt_data, aes(x = as.factor(x), y = Prevalence, fill = as.factor(x))) +
-  geom_col() +
-  geom_errorbar(aes(ymin = lower, ymax = upper), width = 0.25) +
-  labs(title = "Estimated Prevalence", fill = "X") +
-  xlab("X") +
-  scale_fill_brewer(palette = "Set1") +
-  ylim(c(0,0.2))
+b <- EBM_df %>%
+  filter(disease == T) %>%
+  group_by(x) %>%
+  summarize(correct_diagnosis_rate = mean(diagnosed)) %>%
+  ggplot(aes(x = x, y = correct_diagnosis_rate, fill = x)) +
+  geom_col() + 
+  scale_fill_brewer(palette = "Set1") + 
+  scale_y_continuous(name = "Correct Diagnosis Rate",
+                   limits = c(0,0.9),
+                   breaks = seq(0, 1, by = 0.1),
+                   labels = scales::percent_format(accuracy = 1)) +
+  labs(title = "After Model Deployment")
 
 ggarrange(a, b, ncol = 2, nrow = 1, common.legend = T, legend = "bottom")
 ```
 
+
+
 ## What happens when this process is iterated
 
-Now we imagine that this is part of a learning healthcare system.  Every year, a new batch of patients comes to the hospital, and is diagnosed (or isn't).  Every year, the researchers retrain their model based on the previous year's diagnoses. The plots below suggest what happens: neither quality of care nor our understanding of the disease improves.  Our estimates of disease prevalence are just as incorrect as ever, and the misdiagnosis rates do not improve for either group.
+Now we imagine that this is part of a learning healthcare system.  Every year, a new batch of patients comes to the hospital, and is diagnosed (or isn't).  Every year, the researchers retrain their model based on the previous year's diagnoses. The plots below suggest what happens: neither quality of care nor our understanding of the disease improves.  Our estimates of disease prevalence are just as incorrect as ever, and the misdiagnosis rates do not improve for either group.  In fact, from year-to-year, the estimated model is largely the same; the parameter estimates get closer or farther from the true values at random, but over time the model does not systematically improve or degrade; it merely reinforces what was already being done.
 
 ```{r}
 simulate_EBM <- function(years = 10){

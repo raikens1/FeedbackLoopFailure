@@ -2,7 +2,7 @@
 % Please edit documentation in R/diagnose_data.R
 \name{diagnosis_fn}
 \alias{diagnosis_fn}
-\title{Calculate Diagnosis Probability, depending on x}
+\title{Calculate Diagnosis Probability}
 \usage{
 diagnosis_fn(severity, x, theta = c(-10, 20, -5))
 }
@@ -11,11 +11,11 @@ diagnosis_fn(severity, x, theta = c(-10, 20, -5))
 
 \item{x}{binary covariate}
 
-\item{theta}{numeric vector giving parameters of diagnostic function (default \code{c(-10, 20, -5)}s)}
+\item{theta}{numeric vector giving parameters of diagnostic function}
 }
 \value{
-
+diagnosis probability between 0 and 1.
 }
 \description{
-Calculate Diagnosis Probability, depending on x
+Calculate Diagnosis Probability
 }

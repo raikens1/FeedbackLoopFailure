@@ -13,5 +13,5 @@ extend_longitudinal_i(row_i)
 result_i, a data frame of years of time for row i
 }
 \description{
-Helper function for generate_longitudinal
+Helper function for generate_longitudinal.
 }

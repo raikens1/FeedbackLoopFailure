@@ -22,6 +22,35 @@ generate_cross_sectional <- function(n = 10000, prevalence = 0.15){
 }
 
 
+#' Generate Cross Sectional Data with Doctors
+#'
+#' Produces a model data frame for a cross-sectional study of individuals, each
+#' assigned to a specific doctor with diagnostic practices described by beta0,
+#' betaS, and betaX
+#'
+#' @param patients_per_doc number of patients seen by each doctor
+#' @param n_docs number of unique doctors in the data set
+#' @param prevalence disease prevalence
+#' @param theta_mean mean prescribing practices
+#'
+#' @return
+#' @export
+generate_cs_with_doctors <- function(patients_per_doc,
+                                     n_docs,
+                                     prevalence = 0.15,
+                                     theta_mean = c(-10, 20, -5),
+                                     sigma = 0.2){
+  n <- patients_per_doc * n_docs
+
+  generate_cross_sectional(n,
+                           prevalence = prevalence) %>%
+    mutate(doctor_id = rep(1:n_docs, each = patients_per_doc),
+           beta0 = rnorm(n, theta_mean[1], sigma),
+           betaS = rnorm(n, theta_mean[2], sigma),
+           betaX = rnorm(n, theta_mean[3], sigma))
+}
+
+
 #' Generate Longitudinal Data Set
 #'
 #' Generate a long-form longitudinal data set of n individuals, each observed at
@@ -90,4 +119,3 @@ severity_fn <- function(t, beta = 0.5, T_shift = 50){
   severity <- 1 / (1 + exp(-beta * (t - T_shift)))
   return(severity)
 }
-

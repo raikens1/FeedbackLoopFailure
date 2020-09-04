@@ -28,54 +28,59 @@ where,
 
 $$\phi(S_i, X_i) = \frac{1}{1 + exp(-(\beta_{0j} + \beta_{1j}S_i + \beta_{2j}X_i))} - c_{x_i \boldsymbol{\theta_j}}.$$
 
-## Doctors vary:
+## Two types of doctors:
 
-Recall that an ideal diagnostic model would have $\beta_1 = \infty$ and $\beta_2 = 0$, since the only feature that really matters is the symptoms, and in this world the symptoms only emerge when the disease is present.  However, doctors aren't perfect at recognizing the symptoms of this disease.  Instead, our doctors have their own diagnostic preferences. Some weight the symptoms more heavily and largely ignore demographics; others weight the demographics heavily and are unlikely to diagnose most cases with the disease in the underdiagnosed demographic group.
+Recall that an ideal diagnostic model would have $\beta_1 = \infty$ and $\beta_2 = 0$, since the only feature that really matters is the symptoms, and in this world the symptoms only emerge when the disease is present.  However, doctors aren't perfect at recognizing the symptoms of this disease.  Instead, our doctors have two patterns:
+
+\begin{align*}
+\boldsymbol{\theta_A} &= (-10, 20, 0)
+\boldsymbol{\theta_B} &= (-10, 20, -10)
+\end{align*}
+
+In other words, "A"-type doctors diagnose people based on the severity of their symptoms only, whereas "B"-type doctors diagnose $X_i = 0$ people at the same rate as A-doctors but diagnose $X_i = 1$ people at a lower rate.  In our case, we know A-doctors will have a lower misdiagnosis rate than B-doctors.
 
 ## A simple doctor population
 
-Now let's imagine we have a population of 200 doctors with their own diagnostic practices.  Each doctor sees 200 patients a year. A histogram rates of correct diagnosis of disease patients for each doctor is shown below, first as an aggregate, then subsetted by X.
+Now let's imagine we have a population of 100 A-doctors and 100 B-doctors.  Each doctor sees 200 patients a year. A histogram rates of correct diagnosis of disease patients for each doctor is shown below, first as an aggregate, then subsetted by X.  
 
 ```{r setup params}
-n_docs <- 200
+n_A_docs <- 100
+n_B_docs <- 100
+theta_A <- c(-10, 20, 0)
+theta_B <- c(-10, 20, -10)
+
 patients_per_doc <- 300
 ```
 
 
 ```{r}
-df <- generate_cs_with_doctors(patients_per_doc, n_docs, sigma = 1) %>%
-  diagnose_cs_with_doctors()
+df_A <- generate_cross_sectional(n = patients_per_doc*n_A_docs, prevalence = 0.15) %>%
+  mutate(doctor_id = rep(1:n_A_docs, each = patients_per_doc),
+         doctor_type = "A") %>%
+  diagnose_cross_sectional(theta = theta_A)
 
-doc_params <- df %>% 
-  group_by(doctor_id) %>% 
-  summarize(beta0 = first(beta0), betaS = first(betaS), betaX = first(betaX))
+df_B <- generate_cross_sectional(n = patients_per_doc*n_B_docs, prevalence = 0.15) %>%
+  mutate(doctor_id = rep((n_A_docs + 1):(n_A_docs + n_B_docs), each = patients_per_doc),
+         doctor_type = "B") %>%
+  diagnose_cross_sectional(theta = theta_B)
+
+full_df <- rbind(df_A, df_B)
 ```
 
 ```{r}
-sample_docs <- expand.grid(S, c(0,1), c(1:5)) %>%
-  rename(S = Var1, X = Var2, doctor_id = Var3) %>%
-  left_join(doc_params, by = "doctor_id") %>%
-  mutate(p_diagnose = diagnosis_fn_by_betas(S, X, beta0, betaS, betaX))
-
-ggplot(sample_docs, aes(x = S, y = p_diagnose, group = doctor_id, color = as.factor(X))) +
-  geom_line() + 
-  facet_wrap(~X) +
-  scale_color_brewer(palette = "Set1")
-```
-
-
-```{r}
-df %>% group_by(doctor_id, x) %>%
+full_df %>% group_by(doctor_id, doctor_type, x) %>%
   filter(disease == T) %>%
   summarize(correct_diagnosis_rate = mean(diagnosed == T)) %>%
-  ggplot(aes(x = correct_diagnosis_rate, y = ..density..)) +
-  geom_histogram(position = "identity", alpha = 0.5) 
-
-df %>% group_by(doctor_id, x) %>%
-  filter(disease == T) %>%
-  summarize(correct_diagnosis_rate = mean(diagnosed == T)) %>%
-  ggplot(aes(x = correct_diagnosis_rate, y = ..density..)) +
+  ggplot(aes(x = correct_diagnosis_rate, y = ..density.., group = doctor_type, fill = doctor_type)) +
   geom_histogram(position = "identity", alpha = 0.5) +
+  scale_fill_brewer(palette = "Set2", name = "Doctor Type") 
+
+full_df %>% group_by(doctor_id, doctor_type, x) %>%
+  filter(disease == T) %>%
+  summarize(correct_diagnosis_rate = mean(diagnosed == T)) %>%
+  ggplot(aes(x = correct_diagnosis_rate, y = ..density.., group = doctor_type, fill = doctor_type)) +
+  geom_histogram(position = "identity", alpha = 0.5) +
+  scale_fill_brewer(palette = "Set2", name = "Doctor Type") +
   facet_wrap(~x) 
 ```
 
@@ -84,7 +89,7 @@ As expected, the doctors have similar diagnosis patterns when $X = 0$, but type 
 ## A data-driven diagnostic model
 
 ```{r}
-glm(diagnosed ~ x + severity, data = df, family = "binomial")
+glm(diagnosed ~ x + severity, data = rbind(df_A, df_B), family = "binomial")
 ```
 
 # What happens over time
@@ -93,17 +98,29 @@ glm(diagnosed ~ x + severity, data = df, family = "binomial")
 simulate_EBM_docs_vary <- function(years = 10, evidence_rate = 0.1){
   for (i in 1:years){
     # generate undiagnosed data
-    curr_df <- df <- generate_cs_with_doctors(patients_per_doc, n_docs, sigma = 1) %>%
+    curr_df_A <- df_A <- generate_cross_sectional(n = patients_per_doc*n_A_docs, prevalence = 0.15) %>%
+      mutate(doctor_id = rep(1:n_A_docs, each = patients_per_doc),
+         doctor_type = "A") %>%
       mutate(study_id = i - 1)
+    
+    curr_df_B <- generate_cross_sectional(n = patients_per_doc*n_B_docs, prevalence = 0.15) %>%
+      mutate(doctor_id = rep((n_A_docs + 1):(n_A_docs + n_B_docs), each = patients_per_doc),
+         doctor_type = "B") %>%
+      mutate(study_id = i - 1 )
   
     if (i == 1){
       # first year, let docs diagnose based on own preferences
-      curr_df <- diagnose_cs_with_doctors(curr_df) %>%
+      curr_df_A <- diagnose_cross_sectional(curr_df_A, theta = theta_A) %>%
         mutate(p_model = NA, p_doc = p_diagnose) %>%
         select(x, disease, severity, doctor_id, doctor_type, study_id, p_model, p_doc, p_diagnose, diagnosed)
       
-      full_df <- curr_df
+      full_df_A <- curr_df_A
       
+      curr_df_B <- diagnose_cross_sectional(curr_df_B, theta = theta_B) %>%
+        mutate(p_model = NA, p_doc = p_diagnose) %>%
+        select(x, disease, severity, doctor_id, doctor_type, study_id, p_model, p_doc, p_diagnose, diagnosed)
+      
+      full_df_B <- curr_df_B
     } else{
       # subsequent years, docs increasingly diagnose based on model
       evidence_weight <- (i - 1)*evidence_rate
