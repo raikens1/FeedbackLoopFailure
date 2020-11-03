@@ -38,12 +38,12 @@ Now let's imagine we have a population of 200 doctors with their own diagnostic 
 
 ```{r setup params}
 n_docs <- 200
-patients_per_doc <- 300
+patients_per_doc <- 1000
 ```
 
 
 ```{r}
-df <- generate_cs_with_doctors(patients_per_doc, n_docs, sigma = 1) %>%
+df <- generate_cs_with_doctors(patients_per_doc, n_docs, sigma = 5) %>%
   diagnose_cs_with_doctors()
 
 doc_params <- df %>% 
@@ -52,6 +52,7 @@ doc_params <- df %>%
 ```
 
 ```{r}
+S <- seq(0, 1, length.out = 100)
 sample_docs <- expand.grid(S, c(0,1), c(1:5)) %>%
   rename(S = Var1, X = Var2, doctor_id = Var3) %>%
   left_join(doc_params, by = "doctor_id") %>%
@@ -77,6 +78,27 @@ df %>% group_by(doctor_id, x) %>%
   ggplot(aes(x = correct_diagnosis_rate, y = ..density..)) +
   geom_histogram(position = "identity", alpha = 0.5) +
   facet_wrap(~x) 
+
+df %>% group_by(doctor_id, x) %>%
+  filter(disease == T) %>%
+  summarize(correct_diagnosis_rate = mean(diagnosed == T),
+            beta0 = first(beta0),
+            betaS = first(betaS),
+            betaX = first(betaX)) %>%
+  ggplot(aes(x = betaX, y = correct_diagnosis_rate, color = as.factor(x))) +
+  geom_point() +
+  scale_color_brewer(palette = "Set1") +
+  facet_wrap(~x)
+
+df %>% group_by(doctor_id) %>%
+  filter(disease == T) %>%
+  summarize(correct_diagnosis_rate = mean(diagnosed == T),
+            beta0 = first(beta0),
+            betaS = first(betaS),
+            betaX = first(betaX)) %>%
+  ggplot(aes(x = betaX, y = correct_diagnosis_rate)) +
+  geom_point()
+
 ```
 
 As expected, the doctors have similar diagnosis patterns when $X = 0$, but type B doctors perform much more poorly when patients with $X = 1$ are considered.
@@ -90,48 +112,43 @@ glm(diagnosed ~ x + severity, data = df, family = "binomial")
 # What happens over time
 
 ```{r}
-simulate_EBM_docs_vary <- function(years = 10, evidence_rate = 0.1){
+simulate_EBM_docs_vary <- function(sigma, n_docs, patients_per_doc = 300,
+                                   years = 10, evidence_rate = 0.1){
   for (i in 1:years){
     # generate undiagnosed data
-    curr_df <- df <- generate_cs_with_doctors(patients_per_doc, n_docs, sigma = 1) %>%
+    curr_df <- generate_cs_with_doctors(patients_per_doc, n_docs, sigma = sigma) %>%
       mutate(study_id = i - 1)
   
     if (i == 1){
       # first year, let docs diagnose based on own preferences
       curr_df <- diagnose_cs_with_doctors(curr_df) %>%
         mutate(p_model = NA, p_doc = p_diagnose) %>%
-        select(x, disease, severity, doctor_id, doctor_type, study_id, p_model, p_doc, p_diagnose, diagnosed)
+        select(x, disease, severity, doctor_id, beta0, betaS, betaX,
+               study_id, p_model, p_doc, p_diagnose, diagnosed)
       
       full_df <- curr_df
       
     } else{
       # subsequent years, docs increasingly diagnose based on model
+      # TODO: make this something more realistic/flexible
       evidence_weight <- (i - 1)*evidence_rate
       
-      nrows_A <- dim(curr_df_A)[1]
-      nrows_B <- dim(curr_df_B)[1]
-      
+      nrows <- dim(curr_df)[1]
+
       # diagnose patients
-      curr_df_A <- curr_df_A %>%
-        mutate(p_model = predict(curr_model, newdata = curr_df_A, type = "response")) %>%
-        mutate(p_doc = diagnosis_fn(severity, x, theta = theta_A)) %>%
+      curr_df <- curr_df %>%
+        mutate(p_model = predict(curr_model, newdata = curr_df, type = "response")) %>%
+        mutate(p_doc = diagnosis_fn_by_betas(severity, x, beta0, betaS, betaX)) %>%
         mutate(p_diagnose = (1 - evidence_weight)*p_doc + evidence_weight*p_model) %>%
-        mutate(diagnosed = rbinom(nrows_A, size = 1, prob = p_diagnose))
-      
-      curr_df_B <- curr_df_B %>% 
-        mutate(p_model = predict(curr_model, newdata = curr_df_B, type = "response")) %>%
-        mutate(p_doc = diagnosis_fn(severity, x, theta = theta_B)) %>%
-        mutate(p_diagnose = (1 - evidence_weight)*p_doc + evidence_weight*p_model) %>%
-        mutate(diagnosed = rbinom(nrows_B, size = 1, prob = p_diagnose))
+        mutate(diagnosed = rbinom(nrows, size = 1, prob = p_diagnose))
       
       # store results
-      full_df_A <- rbind(full_df_A, curr_df_A)
-      full_df_B <- rbind(full_df_B, curr_df_B)
+      full_df <- rbind(full_df, curr_df)
     }
   # build EBM model based on this year's diagnosis
-  curr_model <- glm(diagnosed ~ x + severity, data = rbind(curr_df_A, curr_df_B), family = "binomial")
+  curr_model <- glm(diagnosed ~ x + severity, data = curr_df, family = "binomial")
   }
-  return(rbind(full_df_A, full_df_B))
+  return(full_df)
 }
 ```
 
@@ -140,68 +157,27 @@ simulate_EBM_docs_vary <- function(years = 10, evidence_rate = 0.1){
 First, let's suppose all doctors have the same diagnostic habits.  Let $\theta_A = \theta_B = (-10, 20, -5)$
 
 ```{r}
-n_A_docs <- 25
-n_B_docs <- 25
-theta_A <- c(-10, 20, -5)
-theta_B <- c(-10, 20, -5)
-
-patients_per_doc <- 300
-
-set.seed(123)
-time_df <- simulate_EBM_docs_vary(years = 10)
+set.seed(1243)
+time_df <- simulate_EBM_docs_vary(sigma = 5, n_docs = 50, patients_per_doc = 700, years = 10)
 ```
 
 ```{r}
 plt_data <- time_df %>%
   filter(disease == TRUE) %>%
-  group_by(x, study_id, doctor_id, doctor_type) %>%
-  summarize(correct_diagnosis_rate = mean(diagnosed == 1)) %>%
+  group_by(x, study_id, doctor_id) %>%
+  summarize(correct_diagnosis_rate = mean(diagnosed == 1),
+            beta0 = first(beta0), 
+            betaS = first(betaS),
+            betaX = first(betaX)) %>%
   mutate(x = as.factor(x))
 
 ggplot(plt_data, aes(x = study_id, y = correct_diagnosis_rate, group = doctor_id)) +
-  geom_line(alpha = 0.7) +
+  geom_line(alpha = 0.5) +
   facet_wrap(~x) + 
   scale_x_continuous(name = "Years of Study", breaks = 0:9) +
   scale_y_continuous(name = "Correct Diagnosis Rate",
                      limits = c(0,0.9),
                      breaks = seq(0, 0.9, by = 0.1),
-                     labels = scales::percent_format(accuracy = 1))
+                     labels = scales::percent_format(accuracy = 1)) 
 ```
-
-
-
-# Variable Doctors
-
-Now we imagine that this is part of a learning healthcare system.  Every year, a new batch of patients comes to the hospital, and is diagnosed (or isn't).  Every year, the researchers retrain their model based on the previous year's diagnoses.
-
-```{r}
-n_A_docs <- 25
-n_B_docs <- 25
-theta_A <- c(-10, 20, 0)
-theta_B <- c(-10, 20, -10)
-
-patients_per_doc <- 300
-
-set.seed(123)
-time_df <- simulate_EBM_docs_vary(years = 10)
-```
-
-```{r}
-plt_data <- time_df %>%
-  filter(disease == TRUE) %>%
-  group_by(x, study_id, doctor_id, doctor_type) %>%
-  summarize(correct_diagnosis_rate = mean(diagnosed == 1)) %>%
-  mutate(x = as.factor(x))
-
-ggplot(plt_data, aes(x = study_id, y = correct_diagnosis_rate, group = doctor_id, color = doctor_type)) +
-  geom_line(alpha = 0.7) +
-  facet_wrap(~x) + 
-  scale_color_brewer(palette = "Set2", name = "Doctor Type") +
-  scale_x_continuous(name = "Years of Study", breaks = 0:9) +
-  scale_y_continuous(name = "Correct Diagnosis Rate",
-                     limits = c(0,0.9),
-                     breaks = seq(0, 0.9, by = 0.1),
-                     labels = scales::percent_format(accuracy = 1))
-```
-
 

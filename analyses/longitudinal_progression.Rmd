@@ -96,7 +96,7 @@ The way this plays out is that most people are diagnosed at some point early in 
 
 
 ```{r}
-eg_diagnosed <- diagnose_longitudinal(eg_long, useX = F)
+eg_diagnosed <- diagnose_longitudinal(eg_long, theta = c(-10, 20, 0))
 
 diagnosis_pts <- eg_diagnosed %>%
   group_by(id) %>%
@@ -135,7 +135,7 @@ ggplot(data = plt_data, aes(x = S, y = phi, group = X, color = X)) +
 An example of how this plays out is shown below on a subset of the data.  People with $X = 0$ tend to be diagnosed earlier in their disease progression than people with $X = 1$.
 
 ```{r}
-eg_diagnosed <- diagnose_longitudinal(eg_long, useX = T)
+eg_diagnosed <- diagnose_longitudinal(eg_long)
 
 diagnosis_pts <- eg_diagnosed %>%
   group_by(id) %>%
@@ -155,8 +155,9 @@ ggplot(eg_diagnosed,
        aes(x = t, y = severity, group = id, color = as.factor(x), alpha = diagnosed)) +
   geom_line() +
   geom_point(data = diagnosis_pts, mapping = aes(x = t, y = severity)) +
-  scale_color_brewer(palette = "Set1") +
-  facet_wrap(~x)
+  scale_color_brewer(palette = "Set1", direction = -1, guide = "none") +
+  facet_wrap(~x) +
+  scale_alpha_manual(values = c(0.2, 1), guide = "none")
 ```
 
 

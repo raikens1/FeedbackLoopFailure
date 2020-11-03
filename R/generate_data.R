@@ -42,12 +42,15 @@ generate_cs_with_doctors <- function(patients_per_doc,
                                      sigma = 0.2){
   n <- patients_per_doc * n_docs
 
+  doc_params <- tibble(doctor_id = 1:n_docs,
+                       beta0 = theta_mean[1],
+                       betaS = theta_mean[2],
+                       betaX = rnorm(n_docs, theta_mean[3], sigma)) # rnorm(n_docs, theta_mean[3], sigma)
+
   generate_cross_sectional(n,
                            prevalence = prevalence) %>%
-    mutate(doctor_id = rep(1:n_docs, each = patients_per_doc),
-           beta0 = rnorm(n, theta_mean[1], sigma),
-           betaS = rnorm(n, theta_mean[2], sigma),
-           betaX = rnorm(n, theta_mean[3], sigma))
+    mutate(doctor_id = rep(1:n_docs, each = patients_per_doc)) %>%
+    left_join(doc_params, by = "doctor_id")
 }
 
 
