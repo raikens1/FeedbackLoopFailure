@@ -21,6 +21,27 @@ diagnose_cross_sectional <- function(df, theta = c(-10, 20, -5)){
   return(result)
 }
 
+#' Test Cross-sectional dataset
+#'
+#' Add testing and diagnosis labels (0 or 1) to each individual in a
+#' cross-sectional dataset
+#'
+#' @param df cross-sectional dataset
+#' @param theta, parameters for diagnosis function
+#'
+#' @return diagnosed cross_sectional data set.
+#' @export
+test_cross_sectional <- function(df, theta = c(-10, 20, -5)){
+  n_row <- dim(df)[1]
+
+  result <- df %>%
+    mutate(p_diagnose = diagnosis_fn(severity, x, theta)) %>%
+    mutate(tested = rbinom(n_row, size = 1, p = p_diagnose)) %>%
+    mutate(diagnosed = tested & disease)
+
+  return(result)
+}
+
 
 #' Diagnose Cross-sectional dataset with doctor variation
 #'

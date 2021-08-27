@@ -17,7 +17,8 @@ generate_cs_with_doctors(
 
 \item{n_docs}{number of unique doctors in the data set}
 
-\item{prevalence}{disease prevalence}
+\item{prevalence}{disease prevalence (for now, only supports one number for
+prevalence - i.e. groups must have the same disease prevalence)}
 
 \item{theta_mean}{mean prescribing practices}
 }

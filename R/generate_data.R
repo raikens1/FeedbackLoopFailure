@@ -8,19 +8,90 @@
 #' Produces a model data frame for a cross-sectional study of n individuals.
 #'
 #' @param n sample size
-#' @param prevalence disease prevalence
+#' @param prevalence disease prevalence. Can be a single number from 0 to 1 or a
+#'   vector of two numbers.  If a vector, the first number will be the
+#'   prevalence in the group with x = 0 (usually the classical group), the second will be the prevalence in
+#'   the group with x = 1 (ususally the non-classical group).
 #'
 #' @return data frame of n individuals with baseline binary covariate x, disease
 #'   status, and continuous disease severity
 #' @export
 generate_cross_sectional <- function(n = 10000, prevalence = 0.15){
+  if(length(prevalence) == 1){
+    prevalence <- c(prevalence, prevalence)
+  }
+
   result <- data.frame(
-    x = (rbinom(n, 1, 0.5) == 1),
-    disease = rbinom(n, 1, prevalence)
-    ) %>%
+    x = (rbinom(n, 1, 0.5) == 1)) %>%
+    mutate(disease = ifelse(x == 0,
+                            rbinom(n, 1, prevalence[1]),
+                            rbinom(n, 1, prevalence[2]))) %>%
     dplyr::mutate(severity = disease * runif(n))
 }
 
+
+#' Generate Cross Sectional Data, in which negatives also have symptoms
+#'
+#' Produces a model data frame for a cross-sectional study of n individuals.
+#' Allow non-diseased people to still have some symptoms, following a beta
+#' distribution.
+#'
+#' @inheritParams generate_cross_sectional
+#'
+#' @return data frame of n individuals with baseline binary covariate x, disease
+#'   status, and continuous disease severity
+#' @export
+generate_cs_negatives <- function(n = 10000, prevalence = 0.1){
+
+  if(length(prevalence) == 1){
+    prevalence <- c(prevalence, prevalence)
+  }
+
+  result <- data.frame(
+    x = (rbinom(n, 1, 0.5) == 1)) %>%
+    mutate(disease0 = rbinom(n, 1, prevalence[1]),
+           disease1 = rbinom(n, 1, prevalence[2])) %>%
+    mutate(disease = ifelse(x == 0, disease0, disease1)) %>%
+    select(-c(disease0, disease1)) %>%
+    dplyr::mutate(severity = disease * rbeta(n, 5, 2.5) + (1 - disease) * rbeta(n, 1, 5) ) %>%
+    dplyr::mutate(disease = as.logical(disease))
+}
+
+
+#' Generate Cross Sectional Data with variation in presentation between groups
+#'
+#' Produces a model data frame for a cross-sectional study of n individuals.
+#' Allow non-diseased people to still have some symptoms, following a beta
+#' distribution.  Individuals with covariate X = 1 have a different distribution
+#' of symptoms than those with X = 0
+#'
+#' @inheritParams generate_cross_sectional
+#'
+#' @return data frame of n individuals with baseline binary covariate x, disease
+#'   status, and continuous disease severity
+#' @export
+generate_cs_case4 <- function(n = 10000, prevalence = 0.1){
+
+  if(length(prevalence) == 1){
+    prevalence <- c(prevalence, prevalence)
+  }
+
+  result <- data.frame(
+    x = (rbinom(n, 1, 0.5) == 1)) %>%
+    dplyr::mutate(disease0 = rbinom(n, 1, prevalence[1]),
+           disease1 = rbinom(n, 1, prevalence[2])) %>%
+    dplyr::mutate(disease = ifelse(x == 0, disease0, disease1)) %>%
+    dplyr::select(-c(disease0, disease1)) %>%
+    dplyr::mutate(severity_control = rbeta(n, 1, 5),
+                  severity_0 = rbeta(n, 5, 2.5),
+                  severity_1 = rbeta(n, 5, 4)) %>%
+    dplyr::mutate(severity = dplyr::case_when(disease == 0 ~ severity_control,
+                                       disease == 1 & x == 0 ~ severity_0,
+                                       disease == 1 & x == 1 ~ severity_1,
+                                       TRUE ~ NA_real_) ) %>%
+    dplyr::select(-c(severity_control, severity_0, severity_1)) %>%
+    dplyr::mutate(disease = as.logical(disease))
+}
 
 #' Generate Cross Sectional Data with Doctors
 #'
@@ -30,7 +101,8 @@ generate_cross_sectional <- function(n = 10000, prevalence = 0.15){
 #'
 #' @param patients_per_doc number of patients seen by each doctor
 #' @param n_docs number of unique doctors in the data set
-#' @param prevalence disease prevalence
+#' @param prevalence disease prevalence (for now, only supports one number for
+#'   prevalence - i.e. groups must have the same disease prevalence)
 #' @param theta_mean mean prescribing practices
 #'
 #' @return
