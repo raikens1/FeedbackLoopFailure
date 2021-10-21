@@ -486,7 +486,7 @@ Arguably, this kind of phenomenon could affect _any_ disease which is not studie
 
 - Melanoma in dark vs light skinned individuals
 
-- Heart Attack in men vs women
+\pagebreak
 
 # Case 4: Follow-up based on representativeness, demographics (representativeness differs):
 
@@ -551,6 +551,8 @@ ggplot(data = data.frame(R), aes(x = R, y = diagnosis_fn(R, 0, theta = c(-12, 20
 
 ## Results
 
+The plots below show the estimated and actual incidence (A) and the estimated and actual disease severities.  These visuals show a similar story to what we have seen before.
+
 ```{r}
 df_tested <- test_cross_sectional(df, theta = c(-12, 20, 0)) %>%
     mutate(obs_status = case_when(!diagnosed ~ "Not diagnosed",
@@ -604,6 +606,7 @@ b <- ggplot(plt_data, aes(x = severity, group = group, alpha = group, fill = x))
 ggarrange(a, b, ncol = 2, widths =c(2,3), legend = F, labels = "AUTO")
 ```
 
+These plots show the distribution of representativeness among individuals with and without the disease in each group, and individuals with and without diagnosis.
 
 ```{r fig.height=3, fig.width=8}
 A <- ggplot(df, aes(x = severity, fill = status, group = status)) +
@@ -622,3 +625,13 @@ B <- ggplot(df_tested, aes(x = severity, fill = obs_status, group = obs_status))
 
 ggarrange(A, B, labels = "AUTO")
 ```
+
+## Takeaways
+
+These results paint a similar picture to what we've seen in other cases, but with some modifications.  First, even though doctors are not explicitly using different rules to diagnose people from different groups, they have a lower rate of successful diagnosis for people with in the group with less representative symptoms ($X_i = 1$).  This differential rate of missed diagnosis results in a more severe underestimate of disease prevalence in these groups.  Second, the individuals in both groups who _do_ tend to be diagnosed successfully tend to be those whose symptoms are thought to be more representative of the disease (high $R_i$).  This results in the illution that $R$ is a better separator of those with and without the disease than it actually is.  This might lead to an important misconception: rather than identifying that people in one group tend to have different presentation than the other, we might instead conclude that both groups have similar presentations, and the disease is simply less common in the group with the less-well-understood presentation.
+
+This self-reinforces in a similar way to other results we've seen.  We unintentionally produce data which obscures the differences in presentation between groups and instead makes it appear that there is a strong difference in disease risk between groups.  This might clinicians to only follow up on patients in the percieved low-risk group if they have particularly representative symptoms (similar to case 2).  *This is particularly unfortunate because it is exactly the opposite of what someone might suggest if they knew the whole story:* Instead, it might be the case that we should be _more_ open to following up on someone with low $R$ if they are in the $X_i = 1$ group, because many diseased people in this group will have presentations that are less representative of the textbook case!
+
+## Example
+
+The case of heart attacks in women is an illustration of how different selective mechanisms can interact to cause confusion.  In the beginning, doctors were taught to identify the male presentation for heart attack. The medical community and the general public had a preconception that women had a much lower risk of heart attack than they actually did (Cases 2 and 3), and they were ignorant of the differences in presentation between men and women.  This presented a self-reinforcing problem inside and outside of the hospital.  Outside the healthcare system, women were not given the tools to recognize their own risk of heart attack or to identify the signs that they were having a heart attack.  When women with heart attacks did interact with clinical professionals, they were less likely to get appropriate care.  Moreover, it is likely that the women who _were_ identified as having a heart attack were those whose presentations were similar to the male heart attack presentation of clinical cannon, reinforcing clinical ignorance of common female heart attack symptoms\footnote{is there any evidence of this? would be great to have a citation, but I'm guessing this wasn't studied very carefully at the time.}
