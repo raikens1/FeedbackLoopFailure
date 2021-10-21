@@ -20,7 +20,7 @@ n <- 50000
 
 # A model for longitudinal disease progression
 
-Now let's imagine we're dealing with a disease that begins at a low severity and progresses every year.  We'll assume that severity progresses from 0 to 1 according to a sigmoid function with the following parameters:
+Now let's imagine we're dealing with a disease that begins at a low severity and progresses every year.  We'll assume that severity progresses from 0 to 1 according to a sigmoid function with the following parameters: 
 
 $$S_i(t) = \frac{1}{1 + e^{-\beta_i(t - T_i)}}.$$
 Here, $\beta_i$ and $T_i$ are intrinsic to the individual:
