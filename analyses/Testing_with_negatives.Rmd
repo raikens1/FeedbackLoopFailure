@@ -65,7 +65,7 @@ Here's a probabilistic model for one way we could generate these data:
 This means that people _with_ the disease tend to have higher values of $R_i$ and people without the disease largely have lower values of $R_i$, with some exceptions on both sides (for example, individuals with the disease whose presentations are mild or atypical, and individuals without the disease who have some other condition that causes look-alike symptoms).  Here's a histogram of the distribution of representativeness in individuals with and without the disease:
 
 ```{r}
-df <- generate_cs_negatives(n = N, prevalence = 0.1)
+df <- generate_cs_beta(n = N, prevalence = 0.1)
 
 ggplot(df, aes(x = severity, fill = disease, group = disease)) +
   geom_density(alpha = 0.5) + 
@@ -337,7 +337,7 @@ The plot below depicts one such clinical model built using perfectly labeled dat
 Note that we are also eliminating the potential for patient self-selection. This might be similar to supposing that _everyone_ goes to the clinic regardless of their demographics or symptoms, so that the clinician is the only gateway determining who recieves follow-up.  In reality, the selection process determining who seeks care is likely to further bias the observed data.  
 
 ```{r}
-df <- generate_cs_negatives(prevalence = c(0.15, 0.075), n = 100000)
+df <- generate_cs_beta(prevalence = c(0.15, 0.075), n = 100000)
 
 good_model <- glm(disease ~ severity + x, data = df, family = binomial())
 
@@ -362,7 +362,7 @@ ggplot(data = plt_data, aes(x = R, y = phi, group = X, color = X)) +
 This is the data that results when clinicians select individuals for follow-up based on the model above.  Note that the pattern of observed data qualitatively is very similar to case 2 (no difference in disease risk between groups).  This is part of the reason it is difficult to separate these cases in practice without a different study design.
 
 ```{r}
-df <- generate_cs_negatives(prevalence = c(0.15, 0.075), n = N)
+df <- generate_cs_beta(prevalence = c(0.15, 0.075), n = N)
 ```
 
 ```{r}

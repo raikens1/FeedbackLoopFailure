@@ -60,7 +60,7 @@ This means that people _with_ the disease tend to have higher values of $R_i$ an
 We'll want a figure that just shows the clinical selection process for each scenario.
 
 ```{r}
-df <- generate_cs_negatives(prevalence = c(0.15, 0.075), n = 100000)
+df <- generate_cs_beta(prevalence = c(0.15, 0.075), n = 100000)
 
 good_model <- glm(disease ~ severity + x, data = df, family = binomial())
 
@@ -139,7 +139,7 @@ In each case, the researcher may ask: What is the incidence of the disease?  Is 
 ## Case 1
 
 ```{r}
-df <- generate_cs_negatives(n = N, prevalence = 0.1)
+df <- generate_cs_beta(n = N, prevalence = 0.1)
 ```
 
 ```{r}
@@ -225,7 +225,7 @@ ggsave("figures/case1.pdf", p, width = 8, height = 7.5)
 ## Case 2a
 
 ```{r}
-df <- generate_cs_negatives(N, prevalence = 0.1)
+df <- generate_cs_beta(N, prevalence = 0.1)
 
 df_tested <- test_cross_sectional(df, theta = c(-10, 20, -3))
 ```
@@ -327,7 +327,7 @@ ggsave("figures/case2a.pdf", p, width = 9, height = 7.5)
 ## Case 2b
 
 ```{r}
-df <- generate_cs_negatives(prevalence = c(0.15, 0.075), n = N)
+df <- generate_cs_beta(prevalence = c(0.15, 0.075), n = N)
 ```
 
 ```{r}

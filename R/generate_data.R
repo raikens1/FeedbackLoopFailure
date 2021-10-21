@@ -41,7 +41,7 @@ generate_cross_sectional <- function(n = 10000, prevalence = 0.15){
 #' @return data frame of n individuals with baseline binary covariate x, disease
 #'   status, and continuous disease severity
 #' @export
-generate_cs_negatives <- function(n = 10000, prevalence = 0.1){
+generate_cs_beta <- function(n = 10000, prevalence = 0.1){
 
   if(length(prevalence) == 1){
     prevalence <- c(prevalence, prevalence)
