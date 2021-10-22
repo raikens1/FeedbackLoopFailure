@@ -22,7 +22,7 @@ n <- 50000
 
 Now let's imagine we're dealing with a disease that begins at a low severity and progresses every year.  We'll assume that severity progresses from 0 to 1 according to a sigmoid function with the following parameters: 
 
-$$S_i(t) = \frac{1}{1 + e^{-\beta_i(t - T_i)}}.$$
+$$R_i(t) = \frac{1}{1 + e^{-\beta_i(t - T_i)}}.$$
 Here, $\beta_i$ and $T_i$ are intrinsic to the individual:
 
 \begin{itemize}
@@ -74,22 +74,22 @@ ggplot(eg_long, aes(x = t, y = severity, group = id, color = as.factor(x))) +
 
 \pagebreak
 
-# Model: Diagnosis rate depends on severity
+# Model: Diagnosis rate depends on representativeness
 
-Below is a straightforward example in which diagnosis rate depends on severity, but not baseline characteristics.  As in the single-time-point models, let
+Below is a straightforward example in which diagnosis rate depends on representativeness, but not baseline characteristics.  As in the single-time-point models, let
 
-$$D_i \sim_{iid} \text{Bernoulli}\left(\phi(S_i\right))$$
+$$D_i \sim_{iid} \text{Bernoulli}\left(\phi(R_i\right))$$
 Where, 
 
-$$\phi(S_i) = \frac{1}{1 + exp(-(\beta_0 + \beta_1S_i))} - c$$
-Here, $c = \frac{1}{1 + exp(-\beta_0)}$ is a corrective constant to ensure that $\phi(0) = 0$. Let $\beta_1 = 20$ and $\beta_0 = -10$.  This gives the following probability of diagnosis as a function of severity.
+$$\phi(R_i) = \frac{1}{1 + exp(-(\beta_0 + \beta_1R_i))} - c$$
+Here, $c = \frac{1}{1 + exp(-\beta_0)}$ is a corrective constant to ensure that $\phi(0) = 0$. Let $\beta_1 = 20$ and $\beta_0 = -10$.  This gives the following probability of diagnosis as a function of representativeness.
 
 ```{r fig.height=3, fig.width=3}
-S <- seq(0, 1, length.out = 100)
+R <- seq(0, 1, length.out = 100)
 
-ggplot(data = data.frame(S), aes(x = S, y = 1/(1 + exp(-(20*S - 10))))) +
+ggplot(data = data.frame(R), aes(x = R, y = 1/(1 + exp(-(20*R - 10))))) +
   geom_line() + xlim(c(0,1)) + ylim(c(0,1)) + coord_fixed()+
-  ylab("P(Diagnosis | S)")
+  ylab("P(Diagnosis | R)")
 ```
 
 The way this plays out is that most people are diagnosed at some point early in the upswing of their diease progression, and their diagnosis probability does not depend on their value of $X$.
@@ -111,11 +111,11 @@ ggplot(eg_diagnosed, aes(x = t, y = severity, group = id, color = as.factor(x), 
 
 \pagebreak
 
-# Model: Diagnosis rate depends on severity and baseline covariates
+# Model: Diagnosis rate depends on representativeness and baseline covariates
 
-Now, let's suppose that the probability of diagnosis depends on severity and baseline characteristics:
+Now, let's suppose that the probability of diagnosis depends on representativeness and baseline characteristics:
 
-$$\phi(S_i, X_i) = \frac{1}{1 + exp(-(\beta_0 + \beta_1S_i + \beta_2X_i))} - c_{x_i},$$
+$$\phi(R_i, X_i) = \frac{1}{1 + exp(-(\beta_0 + \beta_1R_i + \beta_2X_i))} - c_{x_i},$$
 
 where again, $c_{x_i} = \frac{1}{1 + exp(-(\beta_0 + \beta_2X_i))}$ is a corrective constant to ensure that $\phi(0, X_i) = 0$. Also, let $\beta_2 = -5$.
 
@@ -192,7 +192,7 @@ long_df <- generate_longitudinal(n = n)
 ```
 
 ```{r}
-full_long_df <- diagnose_longitudinal(long_df, useX = T)
+full_long_df <- diagnose_longitudinal(long_df)
 
 observed_long_df <- full_long_df %>%
   filter(diagnosed == T)
@@ -316,22 +316,22 @@ Suppose that, for every year that a patient experiences symptoms and does not ha
 
 As a simple model, let's suppose
 
-$$M_i \sim_{iid} \text{Bernoulli}\left(\Psi(S_i, D_i\right)),$$
+$$M_i \sim_{iid} \text{Bernoulli}\left(\Psi(R_i, D_i\right)),$$
 where
 
-$$\psi(S_i, D_i) = I_{D_i = 0} \frac{1/10}{1 + exp(-(\beta_0 + \beta_1S_i))} - c$$
+$$\psi(R_i, D_i) = I_{D_i = 0} \frac{1/10}{1 + exp(-(\beta_0 + \beta_1R_i))} - c$$
 
-Inessence, a person who is undiagnosed when they reach disease severity $S_i$ has the following diagnosis probabilities:
+Inessence, a person who is undiagnosed when they reach disease severity $R_i$ has the following diagnosis probabilities:
 
 ```{r}
-plt_data <- expand.grid(S, c(T,F), c(T, F)) %>%
-  rename(S = Var1, X = Var2, CorrectDisease = Var3) %>%
+plt_data <- expand.grid(R, c(T,F), c(T, F)) %>%
+  rename(R = Var1, X = Var2, CorrectDisease = Var3) %>%
   mutate(p = ifelse(CorrectDisease == 1, 
-                    1/(1 + exp(-(20*S - 5 * X - 10))),
-                    0.11/(1 + exp(-(20*S - 10))))) %>%
+                    1/(1 + exp(-(20*R - 5 * X - 10))),
+                    0.11/(1 + exp(-(20*R - 10))))) %>%
   mutate(X = as.factor(X))
 
-ggplot(data = plt_data, aes(x = S, y = p, group = X, color = X)) +
+ggplot(data = plt_data, aes(x = R, y = p, group = X, color = X)) +
   geom_line(alpha = 0.8) + xlim(c(0,1)) + ylim(c(0,1)) + coord_fixed() +
   facet_wrap(~CorrectDisease, labeller = label_both)+
   scale_color_brewer(palette = "Set1")

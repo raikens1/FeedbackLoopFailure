@@ -139,7 +139,7 @@ generate_cs_with_doctors <- function(patients_per_doc,
 #' @return a data.frame in long-form
 #' @export
 generate_longitudinal <- function(n = 10000){
-  # TODO: this could probabily be made much faster with expand.grid(id, t =
+  # TODO (enhancement): this could probabily be made much faster with expand.grid(id, t =
   # 1:100) and then joining with beta, T, and disease
   start <- data.frame(
     x = (rbinom(n, 1, 0.5) == 1),
@@ -149,11 +149,13 @@ generate_longitudinal <- function(n = 10000){
     t = 0,
     id = 1:n
   )
-
+  # TODO: For now, just setting representatives = severity so code will run
+  # In the long run, want to relate the two with some random noise
   result <- start %>%
     rowwise() %>%
     do(extend_longitudinal_i(.)) %>%
-    ungroup()
+    ungroup() %>%
+    mutate(representativeness = severity)
 
   return(result)
 }

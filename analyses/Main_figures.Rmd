@@ -147,7 +147,7 @@ simulate_EBM_docs_vary <- function(sigma, n_docs, patients_per_doc = 300,
       # first year, let docs diagnose based on own preferences
       curr_df <- diagnose_cs_with_doctors(curr_df) %>%
         mutate(p_model = NA, p_doc = p_diagnose) %>%
-        select(x, disease, representativeness, doctor_id, beta0, betaS, betaX,
+        select(x, disease, representativeness, doctor_id, beta0, betaR, betaX,
                study_id, p_model, p_doc, p_diagnose, diagnosed)
       
       full_df <- curr_df
@@ -162,7 +162,7 @@ simulate_EBM_docs_vary <- function(sigma, n_docs, patients_per_doc = 300,
       # diagnose patients
       curr_df <- curr_df %>%
         mutate(p_model = predict(curr_model, newdata = curr_df, type = "response")) %>%
-        mutate(p_doc = diagnosis_fn_by_betas(representativeness, x, beta0, betaS, betaX)) %>%
+        mutate(p_doc = diagnosis_fn_by_betas(representativeness, x, beta0, betaR, betaX)) %>%
         mutate(p_diagnose = (1 - evidence_weight)*p_doc + evidence_weight*p_model) %>%
         mutate(diagnosed = rbinom(nrows, size = 1, prob = p_diagnose))
       
@@ -188,7 +188,7 @@ plt_data <- time_df %>%
   group_by(x, study_id, doctor_id) %>%
   summarize(correct_diagnosis_rate = mean(diagnosed == 1),
             beta0 = first(beta0), 
-            betaS = first(betaS),
+            betaR = first(betaR),
             betaX = first(betaX)) %>%
   mutate(x = as.factor(x))
 
@@ -214,7 +214,7 @@ plt_data <- time_df %>%
   group_by(x, study_id, doctor_id) %>%
   summarize(correct_diagnosis_rate = mean(diagnosed == 1),
             beta0 = first(beta0), 
-            betaS = first(betaS),
+            betaR = first(betaR),
             betaX = first(betaX)) %>%
   mutate(x = as.factor(x))
 
