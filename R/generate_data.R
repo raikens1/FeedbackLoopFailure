@@ -14,7 +14,7 @@
 #'   the group with x = 1 (ususally the non-classical group).
 #'
 #' @return data frame of n individuals with baseline binary covariate x, disease
-#'   status, and continuous disease severity
+#'   status, and continuous disease representativeness
 #' @export
 generate_cross_sectional <- function(n = 10000, prevalence = 0.15){
   if(length(prevalence) == 1){
@@ -26,7 +26,7 @@ generate_cross_sectional <- function(n = 10000, prevalence = 0.15){
     mutate(disease = ifelse(x == 0,
                             rbinom(n, 1, prevalence[1]),
                             rbinom(n, 1, prevalence[2]))) %>%
-    dplyr::mutate(severity = disease * runif(n))
+    dplyr::mutate(representativeness = disease * runif(n))
 }
 
 
@@ -39,7 +39,7 @@ generate_cross_sectional <- function(n = 10000, prevalence = 0.15){
 #' @inheritParams generate_cross_sectional
 #'
 #' @return data frame of n individuals with baseline binary covariate x, disease
-#'   status, and continuous disease severity
+#'   status, and continuous disease representativeness
 #' @export
 generate_cs_beta <- function(n = 10000, prevalence = 0.1){
 
@@ -53,7 +53,7 @@ generate_cs_beta <- function(n = 10000, prevalence = 0.1){
            disease1 = rbinom(n, 1, prevalence[2])) %>%
     mutate(disease = ifelse(x == 0, disease0, disease1)) %>%
     select(-c(disease0, disease1)) %>%
-    dplyr::mutate(severity = disease * rbeta(n, 5, 2.5) + (1 - disease) * rbeta(n, 1, 5) ) %>%
+    dplyr::mutate(representativeness = disease * rbeta(n, 5, 2.5) + (1 - disease) * rbeta(n, 1, 5) ) %>%
     dplyr::mutate(disease = as.logical(disease))
 }
 
@@ -68,7 +68,7 @@ generate_cs_beta <- function(n = 10000, prevalence = 0.1){
 #' @inheritParams generate_cross_sectional
 #'
 #' @return data frame of n individuals with baseline binary covariate x, disease
-#'   status, and continuous disease severity
+#'   status, and continuous disease representativeness
 #' @export
 generate_cs_case4 <- function(n = 10000, prevalence = 0.1){
 
@@ -82,14 +82,14 @@ generate_cs_case4 <- function(n = 10000, prevalence = 0.1){
            disease1 = rbinom(n, 1, prevalence[2])) %>%
     dplyr::mutate(disease = ifelse(x == 0, disease0, disease1)) %>%
     dplyr::select(-c(disease0, disease1)) %>%
-    dplyr::mutate(severity_control = rbeta(n, 1, 5),
-                  severity_0 = rbeta(n, 5, 2.5),
-                  severity_1 = rbeta(n, 5, 4)) %>%
-    dplyr::mutate(severity = dplyr::case_when(disease == 0 ~ severity_control,
-                                       disease == 1 & x == 0 ~ severity_0,
-                                       disease == 1 & x == 1 ~ severity_1,
+    dplyr::mutate(representativeness_control = rbeta(n, 1, 5),
+                  representativeness_0 = rbeta(n, 5, 2.5),
+                  representativeness_1 = rbeta(n, 5, 4)) %>%
+    dplyr::mutate(representativeness = dplyr::case_when(disease == 0 ~ representativeness_control,
+                                       disease == 1 & x == 0 ~ representativeness_0,
+                                       disease == 1 & x == 1 ~ representativeness_1,
                                        TRUE ~ NA_real_) ) %>%
-    dplyr::select(-c(severity_control, severity_0, severity_1)) %>%
+    dplyr::select(-c(representativeness_control, representativeness_0, representativeness_1)) %>%
     dplyr::mutate(disease = as.logical(disease))
 }
 
@@ -97,7 +97,7 @@ generate_cs_case4 <- function(n = 10000, prevalence = 0.1){
 #'
 #' Produces a model data frame for a cross-sectional study of individuals, each
 #' assigned to a specific doctor with diagnostic practices described by beta0,
-#' betaS, and betaX
+#' betaR, and betaX
 #'
 #' @param patients_per_doc number of patients seen by each doctor
 #' @param n_docs number of unique doctors in the data set
@@ -116,7 +116,7 @@ generate_cs_with_doctors <- function(patients_per_doc,
 
   doc_params <- tibble(doctor_id = 1:n_docs,
                        beta0 = theta_mean[1],
-                       betaS = theta_mean[2],
+                       betaR = theta_mean[2],
                        betaX = rnorm(n_docs, theta_mean[3], sigma)) # rnorm(n_docs, theta_mean[3], sigma)
 
   generate_cross_sectional(n,

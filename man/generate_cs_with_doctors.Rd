@@ -28,5 +28,5 @@ prevalence - i.e. groups must have the same disease prevalence)}
 \description{
 Produces a model data frame for a cross-sectional study of individuals, each
 assigned to a specific doctor with diagnostic practices described by beta0,
-betaS, and betaX
+betaR, and betaX
 }

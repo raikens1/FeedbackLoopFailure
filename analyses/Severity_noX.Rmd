@@ -17,32 +17,32 @@ theme_set(theme_light())
 n <- 50000
 ```
 
-# A Simple Model with Diagnosis by Severity
+# A Simple Model with Diagnosis by Representativeness
 
-Suppose we want to do a study of a disease. Perhaps our target population is "all people," or perhaps it is some subset of people (e.g. only Men, only Asians, etc.). Each person, $i$, has an underlying (unobserved) disease state $Z_i$ and a disease severity $S_i$.  A simple model is:
+Suppose we want to do a study of a disease. Perhaps our target population is "all people," or perhaps it is some subset of people (e.g. only Men, only Asians, etc.). Each person, $i$, has an underlying (unobserved) disease state $Z_i$ and a disease representativeness $R_i$.  A simple model is:
 
 \begin{align*}
     Z_i &\sim_{iid} \text{Bernoulli}(0.15)\\
-    S_i|Z_i = 1 &\sim_{iid} \text{Uniform}(0, 1)\\
+    R_i|Z_i = 1 &\sim_{iid} \text{Uniform}(0, 1)\\
 \end{align*}
 
-Where $S_i = 0$ whenever $Z_i = 0$. 
+Where $R_i = 0$ whenever $Z_i = 0$. 
 
-Suppose additionally that a person's likelihood of diagnosis is a function of the severity of their illness, namely
+Suppose additionally that a person's likelihood of diagnosis is a function of the representativeness of their illness, namely
 
-$$D_i \sim_{iid} \text{Bernoulli}\left(\phi(S_i\right))$$
+$$D_i \sim_{iid} \text{Bernoulli}\left(\phi(R_i\right))$$
 
-$\phi(S_i)$ could be many possible functions, here I use a sigmoid function:
+$\phi(R_i)$ could be many possible functions, here I use a sigmoid function:
 
-$$\phi(S_i) = \frac{1}{1 + exp(-(\beta_0 + \beta_1S_i))} - c$$
-Here, $c = \frac{1}{1 + exp(-\beta_0)}$ is a corrective constant to ensure that $\phi(0) = 0$. Let $\beta_1 = 20$ and $\beta_0 = -10$.  This gives the following probability of diagnosis as a function of severity.
+$$\phi(R_i) = \frac{1}{1 + exp(-(\beta_0 + \beta_1R_i))} - c$$
+Here, $c = \frac{1}{1 + exp(-\beta_0)}$ is a corrective constant to ensure that $\phi(0) = 0$. Let $\beta_1 = 20$ and $\beta_0 = -10$.  This gives the following probability of diagnosis as a function of representativeness.
 
 ```{r fig.height=3, fig.width=3}
-S <- seq(0, 1, length.out = 100)
+R <- seq(0, 1, length.out = 100)
 
-ggplot(data = data.frame(S), aes(x = S, y = diagnosis_fn(S, 0, theta = c(-10, 20, 0)))) +
+ggplot(data = data.frame(R), aes(x = R, y = diagnosis_fn(R, 0, theta = c(-10, 20, 0)))) +
   geom_line() + xlim(c(0,1)) + ylim(c(0,1)) + coord_fixed()+
-  ylab("P(Diagnosis | S)")
+  ylab("P(Diagnosis | R)")
 ```
 
 A few example rows sampled from the above distribution are printed below:
@@ -65,9 +65,9 @@ Let's suppose that a naive researcher would like to study this disease.  In part
 
 1. What is the prevalence of the disease?
 
-2. What is the distribution of severities of this disease?
+2. What is the distribution of representativeness of this disease?
 
-This researcher collects `r n` records from the EHR, $\left\{S_i, D_i\right\}_{i = 1}^n$.  We'll assume for the moment that the individuals represented in the EHR are representative of the target population (this is almost certainly false - it's inevitable that there are types of people that systematically tend not to appear in the EHR at all). We will suppose that not all information about all of these individuals is recorded (i.e. the underlying disease states for all individuals are not known). 
+This researcher collects `r n` records from the EHR, $\left\{R_i, D_i\right\}_{i = 1}^n$.  We'll assume for the moment that the individuals represented in the EHR are representative of the target population (this is almost certainly false - it's inevitable that there are types of people that systematically tend not to appear in the EHR at all). We will suppose that not all information about all of these individuals is recorded (i.e. the underlying disease states for all individuals are not known). 
 
 Because they observe the diagnoses but not the underlying disease states, the naive researcher considers only the diagnosed people to have the disease.  
 
@@ -79,24 +79,24 @@ Out of `r n` people, `r sum(df$diagnose)` are diagnosed, so they estimate the pr
 binom.confint(sum(df$diagnose), n, method = "asymptotic") %>% kable(digits = 3)
 ```
 
-### Severity Distrubution
+### Representativeness Distrubution
 
-Now they want to understand the severity of the disease.  Let's suppose for the moment that we have a straightforward measure of disease severity between 0 and 1.  The researcher calls any severity less than 1/3 "low" severity, 1/3 - 2/3 "medium" severity and 2/3-1 "high" severity.  From these counts, they conclude that this disease more frequently occurs at high severities, and that mild forms of the disease are rare.
+Now they want to understand the distribution of representativeness of the disease's symptoms.  Let's suppose for the moment that we have a straightforward measure of representativeness between 0 and 1.  The researcher calls any representativeness less than 1/3 "low" representativeness, 1/3 - 2/3 "medium" representativeness and 2/3-1 "high" representativeness.  From these counts, they conclude that this disease more frequently occurs at high representativeness, and that mild forms of the disease are rare.
 
 ```{r}
 df %>%
   filter(diagnosed == T) %>%
-  mutate(severity_grp = ifelse(severity < 1/3, "low", ifelse(severity < 2/3, "medium", "high"))) %>%
-  group_by(severity_grp) %>%
+  mutate(representativeness_grp = ifelse(representativeness < 1/3, "low", ifelse(representativeness < 2/3, "medium", "high"))) %>%
+  group_by(representativeness_grp) %>%
   summarize(count = n(), prevalence = n()/sum(df$diagnose)) %>%
   arrange(count) %>%
   kable(digits = 2)
 ```
 
-Finally, they want an estimate of median severity and quantiles.  They find that the median severity is quite high, based on the severity quantiles in the diagnosed people, below
+Finally, they want an estimate of median representativeness and quantiles.  They find that the median representativeness is quite high, based on the representativeness quantiles in the diagnosed people, below
 
 ```{r}
-df %>% filter(diagnosed == T) %>% pull(severity) %>% quantile() %>% kable()
+df %>% filter(diagnosed == T) %>% pull(representativeness) %>% quantile() %>% kable()
 ```
 
 The researcher concludes that this is a disease that appears in about `r round(sum(df$diagnose)/n * 100, digits = 2)`% of the population and that when it appears it tends to be severe.
@@ -105,7 +105,7 @@ The researcher concludes that this is a disease that appears in about `r round(s
 
 ## What's wrong with this approach
 
-The issue here is that the researcher acts as though everyone who has the disease is diagnosed.  In their calculations of prevalence they are estimating $P(D_i = 1)$, but they imagine they are estimating $P(Z_i = 1)$.  In their calculations of severity they imagine they are understanding $P(S_i)$, when in fact they are estimating $P(S_i | D_i = 1).$
+The issue here is that the researcher acts as though everyone who has the disease is diagnosed.  In their calculations of prevalence they are estimating $P(D_i = 1)$, but they imagine they are estimating $P(Z_i = 1)$.  In their calculations of representativeness they imagine they are understanding $P(R_i)$, when in fact they are estimating $P(R_i | D_i = 1).$
 
 Under this model, we have a disease prevalence of 15% and a diagnosis rate of about 50%.  Already we can see how misdiagnosis can distort our perception of the disease - If we consider only the people being diagnosed for the disease, the disease prevalence appears to be about half what it actually is.
 
@@ -113,7 +113,7 @@ Under this model, we have a disease prevalence of 15% and a diagnosis rate of ab
 df %>% group_by(disease) %>% summarize(Total = n(), Diagnosed = sum(diagnosed)) %>% kable()
 ```
 
-This diagnosis process distorts the distribution of severities we observe.  
+This diagnosis process distorts the distribution of representativeness we observe.  
 
 ```{r}
 diseased <- df %>% filter(disease == TRUE) %>%
@@ -122,7 +122,7 @@ diseased <- df %>% filter(disease == TRUE) %>%
 diagnosed <- df %>% filter(diagnosed == TRUE) %>%
   mutate(group = "Individuals Diagnosed", alpha = 1)
 
-ggplot(rbind(diseased, diagnosed), aes(x = severity, group = group)) +
+ggplot(rbind(diseased, diagnosed), aes(x = representativeness, group = group)) +
   geom_histogram(aes(alpha = alpha), position = "identity") +
   scale_alpha(range = c(0.4, 0.8))
 ```
@@ -132,7 +132,7 @@ ggplot(rbind(diseased, diagnosed), aes(x = severity, group = group)) +
 
 # What Happens When we Sample
 
-Suppose up until now that every diagnosis has been made with a diagnostic test, which we'll assume for now has perfect sensitivity and specificity.  Now suppose that for 5% of the population we decide to test them anyway, regardless of the severity of their symptoms, we retrieve the uniform distribution in the randomly tested sample.
+Suppose up until now that every diagnosis has been made with a diagnostic test, which we'll assume for now has perfect sensitivity and specificity.  Now suppose that for 5% of the population we decide to test them anyway, regardless of the representativeness of their symptoms, we retrieve the uniform distribution in the randomly tested sample.
 
 ```{r}
 df_sample <- df %>%
@@ -146,7 +146,7 @@ diseased <- df_sample %>% filter(disease == TRUE) %>%
 diagnosed <- df_sample %>% filter(new_diagnosed == TRUE) %>%
   mutate(group = "Individuals Diagnosed", alpha = 1)
 
-ggplot(rbind(diseased, diagnosed), aes(x = severity, group = group)) +
+ggplot(rbind(diseased, diagnosed), aes(x = representativeness, group = group)) +
   geom_histogram(aes(alpha = alpha), position = "identity") +
   scale_alpha(range = c(0.4, 0.8))
 ```
@@ -192,12 +192,12 @@ kable(tabledata, digits = 0)
 
 Here's some maths that might be useful...? $i$ subscripts are dropped for simplicity
 
-$$P(D = 1|S) = \frac{P(S|D = 1)P(D)}{P(S)}$$
+$$P(D = 1|R) = \frac{P(R|D = 1)P(D)}{P(R)}$$
 
 It seems like all the quantities on the right hand side are knowable quantities, and it would be nice to understand the left hand side so we could understand how this distorts our measurement process.  Moreover
 
-$$P(S) = P(S|Z = 1)P(Z = 1) + P(S|Z = 0)P(Z = 0)$$
-I'm less clear on how this would be useful to us, but the left hand side could be a knowable quantity and the right hand side is all things it would be nice to know.  If we can reasonably assume that $P(S|Z = 0) = 0$ (i.e. the symptoms/severity in question cannot be explained by any other disease), then the problem simplifies substantially.  Then we could estimate the number of symptomatic cases by identifying all people with $S \neq 0$, and the problem reduces to identifying the cases where $Z = 1$ but $S = 0$.
+$$P(R) = P(R|Z = 1)P(Z = 1) + P(R|Z = 0)P(Z = 0)$$
+I'm less clear on how this would be useful to us, but the left hand side could be a knowable quantity and the right hand side is all things it would be nice to know.  If we can reasonably assume that $P(R|Z = 0) = 0$ (i.e. the symptoms/representativeness in question cannot be explained by any other disease), then the problem simplifies substantially.  Then we could estimate the number of symptomatic cases by identifying all people with $R \neq 0$, and the problem reduces to identifying the cases where $Z = 1$ but $R = 0$.
 
 
 Also
@@ -210,8 +210,8 @@ Which seems useful?  Because we might be able to get a handle on $P(Z|D)$ from o
 
 Even at this simple stage there are tweaks that could be made.  Here are some:
 
-1. We could vary the distribution of severities $S_i | Z_i = 1$.  For example these could be normal (most people medium ill), right tailed (most people mildly ill), or left-tailed (most people very ill).  There is no reason the severity must be between zero and 1.
+1. We could vary the distribution of representativeness $R_i | Z_i = 1$.  For example these could be normal (most people medium ill), right tailed (most people mildly ill), or left-tailed (most people very ill).  There is no reason the representativeness must be between zero and 1.
 
-2. We could vary the probability of diagnosis based on severity, $\phi(S_i)$
+2. We could vary the probability of diagnosis based on representativeness, $\phi(R_i)$
 
-3. Rather than considering severity, we could consider some number of discrete symptoms, $W_{i1}, ....W_{ik}$, and have $\phi(W_{i1}, ....W_{ik})$.
+3. Rather than considering representativeness, we could consider some number of discrete symptoms, $W_{i1}, ....W_{ik}$, and have $\phi(W_{i1}, ....W_{ik})$.

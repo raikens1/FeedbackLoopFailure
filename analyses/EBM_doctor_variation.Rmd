@@ -21,12 +21,12 @@ prev <- 0.15
 
 # Doctor variation
 
-Now let's take a doctor-centric view.  Suppose that doctors (indexed by $j$) diagnose with a probability that depends on (1) the severity of the patient's symptoms, $S_i$ (2) the patients demographics $X_i$, and (3) the parameters of their own diagnostic habits, $\boldsymbol{\theta}_j = (\beta_{0j}, \beta_{1j}, \beta_{2j})$. Explicitly, for patient $i$ seeing doctor $j$, 
+Now let's take a doctor-centric view.  Suppose that doctors (indexed by $j$) diagnose with a probability that depends on (1) the representativeness of the patient's symptoms, $R_i$ (2) the patients demographics $X_i$, and (3) the parameters of their own diagnostic habits, $\boldsymbol{\theta}_j = (\beta_{0j}, \beta_{1j}, \beta_{2j})$. Explicitly, for patient $i$ seeing doctor $j$, 
 
-$$D_i \sim_{iid} \text{Bernoulli}\left(\phi(S_i, X_i, \boldsymbol{\theta}_j)\right)$$
+$$D_i \sim_{iid} \text{Bernoulli}\left(\phi(R_i, X_i, \boldsymbol{\theta}_j)\right)$$
 where, 
 
-$$\phi(S_i, X_i) = \frac{1}{1 + exp(-(\beta_{0j} + \beta_{1j}S_i + \beta_{2j}X_i))} - c_{x_i \boldsymbol{\theta_j}}.$$
+$$\phi(R_i, X_i) = \frac{1}{1 + exp(-(\beta_{0j} + \beta_{1j}R_i + \beta_{2j}X_i))} - c_{x_i \boldsymbol{\theta_j}}.$$
 
 ## Doctors vary:
 
@@ -48,17 +48,17 @@ df <- generate_cs_with_doctors(patients_per_doc, n_docs, sigma = 5) %>%
 
 doc_params <- df %>% 
   group_by(doctor_id) %>% 
-  summarize(beta0 = first(beta0), betaS = first(betaS), betaX = first(betaX))
+  summarize(beta0 = first(beta0), betaR = first(betaR), betaX = first(betaX))
 ```
 
 ```{r}
-S <- seq(0, 1, length.out = 100)
-sample_docs <- expand.grid(S, c(0,1), c(1:5)) %>%
-  rename(S = Var1, X = Var2, doctor_id = Var3) %>%
+R <- seq(0, 1, length.out = 100)
+sample_docs <- expand.grid(R, c(0,1), c(1:5)) %>%
+  rename(R = Var1, X = Var2, doctor_id = Var3) %>%
   left_join(doc_params, by = "doctor_id") %>%
-  mutate(p_diagnose = diagnosis_fn_by_betas(S, X, beta0, betaS, betaX))
+  mutate(p_diagnose = diagnosis_fn_by_betas(R, X, beta0, betaR, betaX))
 
-ggplot(sample_docs, aes(x = S, y = p_diagnose, group = doctor_id, color = as.factor(X))) +
+ggplot(sample_docs, aes(x = R, y = p_diagnose, group = doctor_id, color = as.factor(X))) +
   geom_line() + 
   facet_wrap(~X) +
   scale_color_brewer(palette = "Set1")
@@ -83,7 +83,7 @@ df %>% group_by(doctor_id, x) %>%
   filter(disease == T) %>%
   summarize(correct_diagnosis_rate = mean(diagnosed == T),
             beta0 = first(beta0),
-            betaS = first(betaS),
+            betaR = first(betaR),
             betaX = first(betaX)) %>%
   ggplot(aes(x = betaX, y = correct_diagnosis_rate, color = as.factor(x))) +
   geom_point() +
@@ -94,7 +94,7 @@ df %>% group_by(doctor_id) %>%
   filter(disease == T) %>%
   summarize(correct_diagnosis_rate = mean(diagnosed == T),
             beta0 = first(beta0),
-            betaS = first(betaS),
+            betaR = first(betaR),
             betaX = first(betaX)) %>%
   ggplot(aes(x = betaX, y = correct_diagnosis_rate)) +
   geom_point()
@@ -106,7 +106,7 @@ As expected, the doctors have similar diagnosis patterns when $X = 0$, but type 
 ## A data-driven diagnostic model
 
 ```{r}
-glm(diagnosed ~ x + severity, data = df, family = "binomial")
+glm(diagnosed ~ x + representativeness, data = df, family = "binomial")
 ```
 
 # What happens over time
@@ -123,7 +123,7 @@ simulate_EBM_docs_vary <- function(sigma, n_docs, patients_per_doc = 300,
       # first year, let docs diagnose based on own preferences
       curr_df <- diagnose_cs_with_doctors(curr_df) %>%
         mutate(p_model = NA, p_doc = p_diagnose) %>%
-        select(x, disease, severity, doctor_id, beta0, betaS, betaX,
+        select(x, disease, representativeness, doctor_id, beta0, betaR, betaX,
                study_id, p_model, p_doc, p_diagnose, diagnosed)
       
       full_df <- curr_df
@@ -138,7 +138,7 @@ simulate_EBM_docs_vary <- function(sigma, n_docs, patients_per_doc = 300,
       # diagnose patients
       curr_df <- curr_df %>%
         mutate(p_model = predict(curr_model, newdata = curr_df, type = "response")) %>%
-        mutate(p_doc = diagnosis_fn_by_betas(severity, x, beta0, betaS, betaX)) %>%
+        mutate(p_doc = diagnosis_fn_by_betas(representativeness, x, beta0, betaR, betaX)) %>%
         mutate(p_diagnose = (1 - evidence_weight)*p_doc + evidence_weight*p_model) %>%
         mutate(diagnosed = rbinom(nrows, size = 1, prob = p_diagnose))
       
@@ -146,7 +146,7 @@ simulate_EBM_docs_vary <- function(sigma, n_docs, patients_per_doc = 300,
       full_df <- rbind(full_df, curr_df)
     }
   # build EBM model based on this year's diagnosis
-  curr_model <- glm(diagnosed ~ x + severity, data = curr_df, family = "binomial")
+  curr_model <- glm(diagnosed ~ x + representativeness, data = curr_df, family = "binomial")
   }
   return(full_df)
 }
@@ -167,7 +167,7 @@ plt_data <- time_df %>%
   group_by(x, study_id, doctor_id) %>%
   summarize(correct_diagnosis_rate = mean(diagnosed == 1),
             beta0 = first(beta0), 
-            betaS = first(betaS),
+            betaR = first(betaR),
             betaX = first(betaX)) %>%
   mutate(x = as.factor(x))
 

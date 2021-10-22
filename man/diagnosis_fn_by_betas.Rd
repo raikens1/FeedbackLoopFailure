@@ -4,16 +4,16 @@
 \alias{diagnosis_fn_by_betas}
 \title{Calculate Diagnosis Probability}
 \usage{
-diagnosis_fn_by_betas(severity, x, b0 = -10, bS = 20, bX = -5)
+diagnosis_fn_by_betas(representativeness, x, b0 = -10, bR = 20, bX = -5)
 }
 \arguments{
-\item{severity}{disease severity (in [0,1])}
+\item{representativeness}{disease representativeness (in [0,1])}
 
 \item{x}{binary covariate}
 
 \item{b0}{beta coefficient for intercept of diagnostic function}
 
-\item{bS}{beta coefficient for severity in diagnostic function}
+\item{bR}{beta coefficient for representativeness in diagnostic function}
 
 \item{bX}{beta coefficient for X in diagnostic function}
 }

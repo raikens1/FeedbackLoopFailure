@@ -18,7 +18,7 @@ set.seed(123)
 theme_set(theme_light())
 ```
 
-# Case 0: Diagnosis depends on Severity only
+# Case 0: Diagnosis depends on representativeness only
 
 
 ## Prevalence
@@ -57,21 +57,21 @@ diagnosed <- df %>% filter(diagnosed == TRUE) %>%
 
 plt_data <- rbind(diseased, diagnosed)
 
-b <- ggplot(plt_data, aes(x = severity, group = group, alpha = group)) +
+b <- ggplot(plt_data, aes(x = representativeness, group = group, alpha = group)) +
   geom_histogram(position = "identity") +
   scale_alpha_manual(values = c(1, 0.6)) +
-  labs(title = "Distribution of disease severities", x = "Severity", y = "Number of individuals") +
+  labs(title = "Distribution of disease representativeness", x = "Representativeness", y = "Number of individuals") +
   theme(legend.title = element_blank())
 
 ggarrange(a, b, ncol = 2, widths = c(2,3), labels = "AUTO")
 ```
 
-```{r}
+```{r eval=FALSE, include=FALSE}
 pdf("../figures/Figure2.pdf",  width=7, height=3)
 ggarrange(a, b, ncol = 2, widths = c(2,3), labels = "AUTO")
 dev.off()
 ```
-# Case 1: Diagnosis depends on severity and demographics
+# Case 1: Diagnosis depends on representativeness and demographics
 
 ## Prevalence
 
@@ -116,10 +116,10 @@ diagnosed <- df %>% filter(diagnosed == TRUE) %>%
 
 plt_data <- rbind(diseased, diagnosed)
 
-b <- ggplot(plt_data, aes(x = severity, group = group, alpha = group, fill = x)) +
+b <- ggplot(plt_data, aes(x = representativeness, group = group, alpha = group, fill = x)) +
   geom_histogram(position = "identity") +
   scale_alpha_manual(values = c(1, 0.5)) +
-  labs(title = "Distribution of disease severities", x = "Severity", y = "Number of individuals") +
+  labs(title = "Distribution of disease representativeness", x = "Representativeness", y = "Number of individuals") +
   theme(legend.title = element_blank()) +
     scale_fill_brewer(palette = "Set1", direction = -1, guide = "none") +
   facet_wrap(~x)
@@ -127,7 +127,7 @@ b <- ggplot(plt_data, aes(x = severity, group = group, alpha = group, fill = x))
 ggarrange(a, b, ncol = 2, widths =c(2,3), legend = F, labels = "AUTO")
 ```
 
-```{r}
+```{r eval=FALSE, include=FALSE}
 pdf("../figures/Figure3.pdf",  width=8, height=3)
 ggarrange(a, b, ncol = 2, widths =c(2,3), legend = F, labels = "AUTO")
 dev.off()
@@ -147,7 +147,7 @@ simulate_EBM_docs_vary <- function(sigma, n_docs, patients_per_doc = 300,
       # first year, let docs diagnose based on own preferences
       curr_df <- diagnose_cs_with_doctors(curr_df) %>%
         mutate(p_model = NA, p_doc = p_diagnose) %>%
-        select(x, disease, severity, doctor_id, beta0, betaS, betaX,
+        select(x, disease, representativeness, doctor_id, beta0, betaS, betaX,
                study_id, p_model, p_doc, p_diagnose, diagnosed)
       
       full_df <- curr_df
@@ -162,7 +162,7 @@ simulate_EBM_docs_vary <- function(sigma, n_docs, patients_per_doc = 300,
       # diagnose patients
       curr_df <- curr_df %>%
         mutate(p_model = predict(curr_model, newdata = curr_df, type = "response")) %>%
-        mutate(p_doc = diagnosis_fn_by_betas(severity, x, beta0, betaS, betaX)) %>%
+        mutate(p_doc = diagnosis_fn_by_betas(representativeness, x, beta0, betaS, betaX)) %>%
         mutate(p_diagnose = (1 - evidence_weight)*p_doc + evidence_weight*p_model) %>%
         mutate(diagnosed = rbinom(nrows, size = 1, prob = p_diagnose))
       
@@ -170,7 +170,7 @@ simulate_EBM_docs_vary <- function(sigma, n_docs, patients_per_doc = 300,
       full_df <- rbind(full_df, curr_df)
     }
   # build EBM model based on this year's diagnosis
-  curr_model <- glm(diagnosed ~ x + severity, data = curr_df, family = "binomial")
+  curr_model <- glm(diagnosed ~ x + representativeness, data = curr_df, family = "binomial")
   }
   return(full_df)
 }
@@ -232,7 +232,7 @@ ggarrange(a, b, ncol = 1, nrow = 2, labels = "AUTO")
 ```
 
 
-```{r}
+```{r eval=FALSE, include=FALSE}
 pdf("../figures/Figure4.pdf",  width=6, height=5.5)
 ggarrange(a, b, ncol = 1, nrow = 2, labels = "AUTO")
 dev.off()
@@ -258,18 +258,18 @@ diagnosis_pts <- eg_diagnosed %>%
 
 ```{r fig.height=3, fig.width=6}
 a <- ggplot(eg_diagnosed,
-       aes(x = t, y = severity, group = id, color = as.factor(x), alpha = diagnosed)) +
+       aes(x = t, y = representativeness, group = id, color = as.factor(x), alpha = diagnosed)) +
   geom_line() +
-  geom_point(data = diagnosis_pts, mapping = aes(x = t, y = severity)) +
+  geom_point(data = diagnosis_pts, mapping = aes(x = t, y = representativeness)) +
   scale_color_brewer(palette = "Set1", direction = -1, guide = "none") +
   facet_wrap(~x) +
-  labs(y = "Severity", x = "Time") +
+  labs(y = "Representativeness", x = "Time") +
   scale_alpha_manual(values = c(0.2, 1), guide = "none")
 
 a
 ```
 
-```{r}
+```{r eval=FALSE, include=FALSE}
 pdf("../figures/Figure5.pdf",  width=6, height=3)
 a
 dev.off()

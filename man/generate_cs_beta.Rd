@@ -16,7 +16,7 @@ the group with x = 1 (ususally the non-classical group).}
 }
 \value{
 data frame of n individuals with baseline binary covariate x, disease
-  status, and continuous disease severity
+  status, and continuous disease representativeness
 }
 \description{
 Produces a model data frame for a cross-sectional study of n individuals.

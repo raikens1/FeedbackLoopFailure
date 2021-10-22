@@ -4,10 +4,10 @@
 \alias{diagnosis_fn}
 \title{Calculate Diagnosis Probability}
 \usage{
-diagnosis_fn(severity, x, theta = c(-10, 20, -5))
+diagnosis_fn(representativeness, x, theta = c(-10, 20, -5))
 }
 \arguments{
-\item{severity}{disease severity (in [0,1])}
+\item{representativeness}{disease representativeness (in [0,1])}
 
 \item{x}{binary covariate}
 

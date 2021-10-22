@@ -13,7 +13,7 @@ generate_longitudinal(n = 10000)
 a data.frame in long-form
 }
 \description{
-Generate a long-form longitudinal data set of n individuals, each observed at
+Generate a long-form longitudinal data set of n individuals, each obRerved at
 100 time points.  Each individual has the underlying disease, with a disease
 severity that increases over time based on a logistic function.  The logistic
 function is parametrized by beta (rate of onset) and T_shift (time of onset),

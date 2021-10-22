@@ -1,5 +1,5 @@
 ---
-title: "A Model with Severity and a Binary Covariate"
+title: "A Model with Representativeness and a Binary Covariate"
 author: "Rachael Caelie (Rocky) Aikens"
 date: "6/12/2020"
 output: pdf_document
@@ -25,14 +25,14 @@ We'll start with the same model as before, but now we suppose that the populatio
 \begin{align*}
     X_i &\sim_{iid} \text{Bernoulli}(0.5)\\
     Z_i &\sim_{iid} \text{Bernoulli}(0.15)\\
-    S_i|Z_i = 1 &\sim_{iid} \text{Uniform}(0, 1)\\
+    R_i|Z_i = 1 &\sim_{iid} \text{Uniform}(0, 1)\\
 \end{align*}
 
-Where $S_i = 0$ whenever $Z_i = 0$. 
+Where $R_i = 0$ whenever $Z_i = 0$. 
 
-Now let's consider that a person's probability of diagnosis depends on not only the severity of their disease but their baseline characteristics:
+Now let's consider that a person's probability of diagnosis depends on not only the representativeness of their disease but their baseline characteristics:
 
-$$D_i \sim_{iid} \text{Bernoulli}\left(\phi(S_i, X_i)\right)$$
+$$D_i \sim_{iid} \text{Bernoulli}\left(\phi(R_i, X_i)\right)$$
 
 Without loss of generality, let's assume that people with $X_i = 0$ are more likely to be correctly diagnosed than people with $X_i = 1$. There are a couple reasons this could be
 
@@ -44,21 +44,21 @@ Without loss of generality, let's assume that people with $X_i = 0$ are more lik
 
 Explicitly, let's suppose:
 
-$$\phi(S_i, X_i) = \frac{1}{1 + exp(-(\beta_0 + \beta_1S_i + \beta_2X_i))} - c_{x_i},$$
+$$\phi(R_i, X_i) = \frac{1}{1 + exp(-(\beta_0 + \beta_1R_i + \beta_2X_i))} - c_{x_i},$$
 
 where again, $c_{x_i} = \frac{1}{1 + exp(-(\beta_0 + \beta_2X_i))}$ is a corrective constant to ensure that $\phi(0, X_i) = 0$. Let Let $\beta_0 = -10$, $\beta_1 = 20$, and $\beta_2 = -5$.
 
-Inessence, this means that people are diagnosed according to a sigmoid function, with people with $X_i = 1$ needing a higher severity to be diagnosed with the same probability as people with $X_i = 0$, shown below:
+Inessence, this means that people are diagnosed according to a sigmoid function, with people with $X_i = 1$ needing a higher representativeness to be diagnosed with the same probability as people with $X_i = 0$, shown below:
 
 ```{r, fig.height=3, fig.width=3}
-S <- seq(0, 1, length.out = 100)
+R <- seq(0, 1, length.out = 100)
 
-plt_data <- expand.grid(S, c(0,1)) %>%
-  rename(S = Var1, X = Var2) %>%
-  mutate(phi = diagnosis_fn(severity = S, x = X, theta = c(-10, 20, -5))) %>%
+plt_data <- expand.grid(R, c(0,1)) %>%
+  rename(R = Var1, X = Var2) %>%
+  mutate(phi = diagnosis_fn(representativeness = R, x = X, theta = c(-10, 20, -5))) %>%
   mutate(X = as.factor(X))
 
-ggplot(data = plt_data, aes(x = S, y = phi, group = X, color = X)) +
+ggplot(data = plt_data, aes(x = R, y = phi, group = X, color = X)) +
   geom_line() + xlim(c(0,1)) + ylim(c(0,1)) + coord_fixed() +
   scale_color_brewer(palette = "Set1")
 ```
@@ -67,11 +67,11 @@ ggplot(data = plt_data, aes(x = S, y = phi, group = X, color = X)) +
 
 # A Naive Study
 
-Again, we collect a dataset of `r n`, this time recording the baseline characteristic $\left\{S_i, D_i, X_i\right\}_{i = 1}^n$.  Our naive researcher wants to understand:
+Again, we collect a dataset of `r n`, this time recording the baseline characteristic $\left\{R_i, D_i, X_i\right\}_{i = 1}^n$.  Our naive researcher wants to understand:
 
 1. What is the prevalence of the disease in each $X$ group?
 
-2. What is the distribution of severities of this disease in each $X$ group?
+2. What is the distribution of representativeness of this disease in each $X$ group?
 
 ### Prevalence
 
@@ -113,9 +113,9 @@ b <- ggplot(plt_data, aes(x = as.factor(x), y = Prevalence, fill = as.factor(x))
 ggarrange(a, b, ncol = 2, nrow = 1, common.legend = T, legend = "bottom")
 ```
 
-### Severity
+### Representativeness
 
-The plots below show the severity distributions of the diagnosed people in each group, with the hidden undiagnosed people shaded in grey.  The naive researcher might conclude that this disease appears about half as ofen in people with $X_i = 1$, but when it does appear in this group, the disease is especially severe.
+The plots below show the representativeness distributions of the diagnosed people in each group, with the hidden undiagnosed people shaded in grey.  The naive researcher might conclude that this disease appears about half as ofen in people with $X_i = 1$, but when it does appear in this group, the disease is especially severe.
 
 ```{r}
 diseased <- df %>% filter(disease == TRUE) %>%
@@ -124,7 +124,7 @@ diseased <- df %>% filter(disease == TRUE) %>%
 diagnosed <- df %>% filter(diagnosed == TRUE) %>%
   mutate(group = "Individuals Diagnosed", alpha = 1)
 
-ggplot(rbind(diseased, diagnosed), aes(x = severity, group = group)) +
+ggplot(rbind(diseased, diagnosed), aes(x = representativeness, group = group)) +
   geom_histogram(aes(alpha = alpha), position = "identity") +
   scale_alpha(range = c(0.4, 0.8)) +
   facet_wrap(~x)

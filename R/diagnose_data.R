@@ -15,7 +15,7 @@ diagnose_cross_sectional <- function(df, theta = c(-10, 20, -5)){
   n_row <- dim(df)[1]
 
   result <- df %>%
-    mutate(p_diagnose = diagnosis_fn(severity, x, theta)) %>%
+    mutate(p_diagnose = diagnosis_fn(representativeness, x, theta)) %>%
     mutate(diagnosed = rbinom(n_row, size = 1, p = p_diagnose))
 
   return(result)
@@ -35,7 +35,7 @@ test_cross_sectional <- function(df, theta = c(-10, 20, -5)){
   n_row <- dim(df)[1]
 
   result <- df %>%
-    mutate(p_diagnose = diagnosis_fn(severity, x, theta)) %>%
+    mutate(p_diagnose = diagnosis_fn(representativeness, x, theta)) %>%
     mutate(tested = rbinom(n_row, size = 1, p = p_diagnose)) %>%
     mutate(diagnosed = tested & disease)
 
@@ -55,9 +55,9 @@ diagnose_cs_with_doctors <- function(df){
   n_row <- dim(df)[1]
 
   result <- df %>%
-    mutate(p_diagnose = diagnosis_fn_by_betas(severity, x,
+    mutate(p_diagnose = diagnosis_fn_by_betas(representativeness, x,
                                               b0 = beta0,
-                                              bS = betaS,
+                                              bR = betaR,
                                               bX = betaX)) %>%
     mutate(diagnosed = rbinom(n_row, size = 1, p = p_diagnose))
 
@@ -82,7 +82,7 @@ diagnose_longitudinal <- function(df, theta = c(-10, 20, -5)){
 
   result <- df %>%
     mutate(diagnosed = 0,
-           p_diagnose = diagnosis_fn(severity, x, theta)) %>%
+           p_diagnose = diagnosis_fn(representativeness, x, theta)) %>%
     mutate(newly_diagnosed = rbinom(n_row, size = 1, p = p_diagnose)) %>%
     group_by(id) %>%
     mutate(diagnosed = (cumsum(newly_diagnosed) > 0)) %>%
@@ -94,29 +94,29 @@ diagnose_longitudinal <- function(df, theta = c(-10, 20, -5)){
 #' Calculate Diagnosis Probability
 #'
 #' @param x binary covariate
-#' @param severity disease severity (in [0,1])
+#' @param representativeness disease representativeness (in [0,1])
 #' @param theta numeric vector giving parameters of diagnostic function
 #'
 #' @return diagnosis probability between 0 and 1.
 #' @export
-diagnosis_fn <- function(severity, x, theta = c(-10, 20, -5)){
+diagnosis_fn <- function(representativeness, x, theta = c(-10, 20, -5)){
   c <- 1/(1 + exp(-(theta[1] + theta[3] * x)))
 
-  return(1/(1 + exp(-(theta[1] + theta[2] * severity + theta[3] * x))) - c)
+  return(1/(1 + exp(-(theta[1] + theta[2] * representativeness + theta[3] * x))) - c)
 }
 
 #' Calculate Diagnosis Probability
 #'
 #' @param x binary covariate
-#' @param severity disease severity (in [0,1])
+#' @param representativeness disease representativeness (in [0,1])
 #' @param b0 beta coefficient for intercept of diagnostic function
-#' @param bS beta coefficient for severity in diagnostic function
+#' @param bR beta coefficient for representativeness in diagnostic function
 #' @param bX beta coefficient for X in diagnostic function
 #'
 #' @return diagnosis probability between 0 and 1.
 #' @export
-diagnosis_fn_by_betas <- function(severity, x, b0 = -10, bS = 20, bX = -5){
+diagnosis_fn_by_betas <- function(representativeness, x, b0 = -10, bR = 20, bX = -5){
   c <- 1/(1 + exp(-(b0 + bX * x)))
 
-  return(1/(1 + exp(-(b0 + bS * severity + bX * x))) - c)
+  return(1/(1 + exp(-(b0 + bR * representativeness + bX * x))) - c)
 }

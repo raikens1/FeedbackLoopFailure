@@ -67,7 +67,7 @@ This means that people _with_ the disease tend to have higher values of $R_i$ an
 ```{r}
 df <- generate_cs_beta(n = N, prevalence = 0.1)
 
-ggplot(df, aes(x = severity, fill = disease, group = disease)) +
+ggplot(df, aes(x = representativeness, fill = disease, group = disease)) +
   geom_density(alpha = 0.5) + 
   scale_fill_brewer(palette = "Set2") +
   xlab("Representativeness")
@@ -76,7 +76,7 @@ ggplot(df, aes(x = severity, fill = disease, group = disease)) +
 An important thing to remember in this scenario is that individuals with the disease generally greatly outnumber those without.  This means that even though it is relatively rare for an individual without the disease to have look-alike symptoms, there may be a substantial number of them overall:
 
 ```{r}
-ggplot(df, aes(x = severity, fill = disease, group = disease)) +
+ggplot(df, aes(x = representativeness, fill = disease, group = disease)) +
   geom_histogram(alpha = 0.5, position = "identity") + 
   scale_fill_brewer(palette = "Set2") +
   xlab("Representativeness")
@@ -145,7 +145,7 @@ diagnosed <- df_tested %>% filter(diagnosed == TRUE) %>%
 
 plt_data <- rbind(diseased, diagnosed)
 
-b <- ggplot(plt_data, aes(x = severity, group = group, alpha = group)) +
+b <- ggplot(plt_data, aes(x = representativeness, group = group, alpha = group)) +
   geom_histogram(position = "identity") +
   scale_alpha_manual(values = c(1, 0.6)) +
   labs(title = "Distribution of representativeness", x = "Representativeness", y = "Number of individuals") +
@@ -163,14 +163,14 @@ What happens when we use this information to inform future rounds of diagnosis? 
 This force can act outside of the clinical setting as well.  If the public believes this disease is very uncommon and that mild or atypical (low R) presentations of the disease are rare, they may not seek out the right clinical care when they have this disease (e.g. asymptomatic cases of COVID-19 early in the pandemic).
 
 ```{r fig.height=3, fig.width=8}
-A <- ggplot(df, aes(x = severity, fill = disease, group = disease)) +
+A <- ggplot(df, aes(x = representativeness, fill = disease, group = disease)) +
   geom_density(alpha = 0.5) + 
   scale_fill_brewer(palette = "Set2") +
   ggtitle("Diseased vs Not Diseased") + 
   theme(legend.position = "bottom") +
   xlab("Representativeness")
 
-B <- ggplot(df_tested, aes(x = severity, fill = diagnosed, group = diagnosed)) +
+B <- ggplot(df_tested, aes(x = representativeness, fill = diagnosed, group = diagnosed)) +
   geom_density(alpha = 0.5) + 
   scale_fill_brewer(palette = "Set3")+
   ggtitle("Diagnosed vs Not Diagnosed") +
@@ -187,7 +187,7 @@ df_tested %>% mutate(status = case_when(disease == FALSE ~ "No disease",
                                         disease == TRUE & diagnosed == FALSE ~ "Undiagnosed, disease",
                                         diagnosed == TRUE ~ "Diagnosed, disease",
                                         TRUE ~ NA_character_)) %>%
-ggplot(aes(x = severity, fill = status, group = status)) +
+ggplot(aes(x = representativeness, fill = status, group = status)) +
   geom_histogram(alpha = 0.5, position = "identity") + 
   scale_fill_brewer(palette = "Set2") +
   theme(legend.position = "bottom")  +
@@ -247,7 +247,7 @@ R <- seq(0, 1, length.out = 100)
 
 plt_data <- expand.grid(R, c(0,1)) %>%
   rename(R = Var1, X = Var2) %>%
-  mutate(phi = diagnosis_fn(severity = R, x = X, theta = c(-10, 20, -3))) %>%
+  mutate(phi = diagnosis_fn(representativeness = R, x = X, theta = c(-10, 20, -3))) %>%
   mutate(X = as.factor(X))
 
 ggplot(data = plt_data, aes(x = R, y = phi, group = X, color = X)) +
@@ -257,7 +257,7 @@ ggplot(data = plt_data, aes(x = R, y = phi, group = X, color = X)) +
 
 ## Results
 
-Now what does the researcher learn about incidence and presentation in these groups?  The incidence and distribution of severities is shown below.
+Now what does the researcher learn about incidence and presentation in these groups?  The incidence and distribution of representativeness is shown below.
 
 ```{r}
 df_tested <- test_cross_sectional(df, theta = c(-10, 20, -3))
@@ -297,7 +297,7 @@ diagnosed <- df_tested %>% filter(diagnosed == TRUE) %>%
 
 plt_data <- rbind(diseased, diagnosed)
 
-b <- ggplot(plt_data, aes(x = severity, group = group, alpha = group, fill = x)) +
+b <- ggplot(plt_data, aes(x = representativeness, group = group, alpha = group, fill = x)) +
   geom_histogram(position = "identity") +
   scale_alpha_manual(values = c(1, 0.5)) +
   labs(title = "Distribution of representativeness", x = "Representativeness", y = "Number of individuals") +
@@ -339,7 +339,7 @@ Note that we are also eliminating the potential for patient self-selection. This
 ```{r}
 df <- generate_cs_beta(prevalence = c(0.15, 0.075), n = 100000)
 
-good_model <- glm(disease ~ severity + x, data = df, family = binomial())
+good_model <- glm(disease ~ representativeness + x, data = df, family = binomial())
 
 theta_start <- coef(good_model)
 ```
@@ -349,7 +349,7 @@ R <- seq(0, 1, length.out = 100)
 
 plt_data <- expand.grid(R, c(0,1)) %>%
   rename(R = Var1, X = Var2) %>%
-  mutate(phi = diagnosis_fn(severity = R, x = X, theta = theta_start)) %>%
+  mutate(phi = diagnosis_fn(representativeness = R, x = X, theta = theta_start)) %>%
   mutate(X = as.factor(X))
 
 ggplot(data = plt_data, aes(x = R, y = phi, group = X, color = X)) +
@@ -402,10 +402,10 @@ diagnosed <- df_tested %>% filter(diagnosed == TRUE) %>%
 
 plt_data <- rbind(diseased, diagnosed)
 
-b <- ggplot(plt_data, aes(x = severity, group = group, alpha = group, fill = x)) +
+b <- ggplot(plt_data, aes(x = representativeness, group = group, alpha = group, fill = x)) +
   geom_histogram(position = "identity") +
   scale_alpha_manual(values = c(1, 0.5)) +
-  labs(title = "Distribution of disease severities", x = "Severity", y = "Number of individuals") +
+  labs(title = "Distribution of disease representativeness", x = "Representativeness", y = "Number of individuals") +
   theme(legend.title = element_blank()) +
     scale_fill_brewer(palette = "Set1", direction = -1, guide = "none") +
   facet_wrap(~x, scales = "free")
@@ -431,7 +431,7 @@ The next table shows the mean representativeness of correctly diagnosed cases be
 df_tested %>% 
   filter(diagnosed == T) %>%
   group_by(x) %>%
-  summarize(`Mean representativeness of diagnosed cases` = mean(severity)) %>%
+  summarize(`Mean representativeness of diagnosed cases` = mean(representativeness)) %>%
   kable()
 ```
 
@@ -526,7 +526,7 @@ df <- generate_cs_case4(n = N, prevalence = 0.1) %>%
                             TRUE ~ NA_character_)) %>%
   mutate(status = factor(status, levels = c("No disease", "Disease, X = 1", "Disease, X = 0")))
 
-ggplot(df, aes(x = severity, fill = status, group = status)) +
+ggplot(df, aes(x = representativeness, fill = status, group = status)) +
   geom_density(alpha = 0.5) + 
   scale_fill_brewer(palette = "Set2") +
   xlab("Representativeness")
@@ -551,7 +551,7 @@ ggplot(data = data.frame(R), aes(x = R, y = diagnosis_fn(R, 0, theta = c(-12, 20
 
 ## Results
 
-The plots below show the estimated and actual incidence (A) and the estimated and actual disease severities.  These visuals show a similar story to what we have seen before.
+The plots below show the estimated and actual incidence (A) and the estimated and actual disease representativeness.  These visuals show a similar story to what we have seen before.
 
 ```{r}
 df_tested <- test_cross_sectional(df, theta = c(-12, 20, 0)) %>%
@@ -595,10 +595,10 @@ diagnosed <- df_tested %>% filter(diagnosed == TRUE) %>%
 
 plt_data <- rbind(diseased, diagnosed)
 
-b <- ggplot(plt_data, aes(x = severity, group = group, alpha = group, fill = x)) +
+b <- ggplot(plt_data, aes(x = representativeness, group = group, alpha = group, fill = x)) +
   geom_histogram(position = "identity") +
   scale_alpha_manual(values = c(1, 0.5)) +
-  labs(title = "Distribution of disease severities", x = "Severity", y = "Number of individuals") +
+  labs(title = "Distribution of disease representativeness", x = "Representativeness", y = "Number of individuals") +
   theme(legend.title = element_blank()) +
     scale_fill_brewer(palette = "Set1", direction = -1, guide = "none") +
   facet_wrap(~x)
@@ -609,14 +609,14 @@ ggarrange(a, b, ncol = 2, widths =c(2,3), legend = F, labels = "AUTO")
 These plots show the distribution of representativeness among individuals with and without the disease in each group, and individuals with and without diagnosis.
 
 ```{r fig.height=3, fig.width=8}
-A <- ggplot(df, aes(x = severity, fill = status, group = status)) +
+A <- ggplot(df, aes(x = representativeness, fill = status, group = status)) +
   geom_density(alpha = 0.5) + 
   scale_fill_brewer(palette = "Set2") +
   ggtitle("Diseased vs Not Diseased") + 
   theme(legend.position = "bottom") +
   xlab("Representativeness")
 
-B <- ggplot(df_tested, aes(x = severity, fill = obs_status, group = obs_status)) +
+B <- ggplot(df_tested, aes(x = representativeness, fill = obs_status, group = obs_status)) +
   geom_density(alpha = 0.5) + 
   scale_fill_brewer(palette = "Set3")+
   ggtitle("Diagnosed vs Not Diagnosed") +
