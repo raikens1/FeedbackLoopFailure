@@ -4,7 +4,7 @@
 \alias{test_cross_sectional}
 \title{Test Cross-sectional dataset}
 \usage{
-test_cross_sectional(df, theta = c(-10, 20, -5))
+test_cross_sectional(df, theta = c(-12, 20, -3))
 }
 \arguments{
 \item{df}{cross-sectional dataset}

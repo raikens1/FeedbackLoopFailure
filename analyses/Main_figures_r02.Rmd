@@ -227,7 +227,7 @@ ggsave("figures/case1.pdf", p, width = 8, height = 7.5)
 ```{r}
 df <- generate_cs_beta(N, prevalence = 0.1)
 
-df_tested <- test_cross_sectional(df, theta = c(-10, 20, -3))
+df_tested <- test_cross_sectional(df, theta = c(-12, 20, -3))
 ```
 
 ```{r fig.height=3, fig.width=3}
@@ -409,7 +409,7 @@ d <- ggplot(df_tested, aes(x = representativeness, fill = obs_status, group = ob
   theme(legend.position = "right", legend.title = element_blank())  +
   xlab("Representativeness")+
   ylab("Density") +
-  scale_x_continuous(expand = c(0.025, 0))
+  scale_x_continuous(expand = c(0.025, 0)) 
 
 #ggarrange(c, d, ncol = 1, nrow = 2, labels = c("C", "D"))
 ```
@@ -531,4 +531,55 @@ p <- ggarrange(ggarrange(a, b, blankplot, ncol = 3, nrow = 1, widths = c(3, 7, 2
 ```
 ```{r}
 ggsave("figures/case3.pdf", p, width = 9, height = 7.5)
+```
+
+# Longitudinal disease process
+
+For the longitudinal example, we'll use the same simulation set-up as in Case 2.
+
+```{r}
+set.seed(123)
+long_100 <- generate_longitudinal(n = 100, sigma = 2)
+
+eg_ids <- long_100 %>% select(id, x) %>%
+  distinct() %>%
+  group_by(x) %>%
+  slice_sample(n = 10) %>%
+  ungroup() %>%
+  pull(id)
+
+eg_long <- filter(long_100, id %in% eg_ids)
+```
+
+```{r}
+eg_diagnosed <- test_longitudinal(eg_long, theta = c(-12, 20, -3))
+
+diagnosis_pts <- eg_diagnosed %>%
+  group_by(id) %>%
+  arrange(-diagnosed, t) %>%
+  slice_head(1)
+
+ggplot(eg_diagnosed,
+       aes(x = t, y = severity, group = id, color = as.factor(x), alpha = diagnosed)) +
+  geom_line() +
+  geom_point(data = diagnosis_pts, mapping = aes(x = t, y = severity)) +
+  scale_color_brewer(palette = "Set1", direction = -1, guide = "none") +
+  facet_wrap(~ x, labeller = labeller(x = x.labs)) +
+  scale_alpha_manual(values = c(0.2, 1), guide = "none") +
+  xlab("Time") + 
+  ylab("Severity") 
+
+p <- ggplot(eg_diagnosed,
+       aes(x = t, y = severity, group = id, color = as.factor(x), alpha = diagnosed)) +
+  geom_line() +
+  geom_point(data = diagnosis_pts, mapping = aes(x = t, y = severity)) +
+  scale_color_brewer(palette = "Set1", direction = -1, guide = "none") +
+  facet_wrap(~ x, labeller = labeller(x = x.labs)) +
+  scale_alpha_manual(values = c(0.2, 1), guide = "none") +
+  xlab("Time") + 
+  ylab("Severity") 
+```
+
+```{r}
+ggsave("figures/longitudinal.pdf", p, width = 5, height = 3)
 ```

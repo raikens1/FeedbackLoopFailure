@@ -4,7 +4,7 @@
 \alias{diagnosis_fn_by_betas}
 \title{Calculate Diagnosis Probability}
 \usage{
-diagnosis_fn_by_betas(representativeness, x, b0 = -10, bR = 20, bX = -5)
+diagnosis_fn_by_betas(representativeness, x, b0 = -12, bR = 20, bX = -3)
 }
 \arguments{
 \item{representativeness}{disease representativeness (in [0,1])}

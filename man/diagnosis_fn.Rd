@@ -4,7 +4,7 @@
 \alias{diagnosis_fn}
 \title{Calculate Diagnosis Probability}
 \usage{
-diagnosis_fn(representativeness, x, theta = c(-10, 20, -5))
+diagnosis_fn(representativeness, x, theta = c(-12, 20, -3))
 }
 \arguments{
 \item{representativeness}{disease representativeness (in [0,1])}

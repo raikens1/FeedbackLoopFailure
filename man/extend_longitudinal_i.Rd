@@ -4,10 +4,12 @@
 \alias{extend_longitudinal_i}
 \title{Extend Longitudinal Data from starting parameters}
 \usage{
-extend_longitudinal_i(row_i)
+extend_longitudinal_i(row_i, sigma)
 }
 \arguments{
 \item{row_i}{row of starting parameters for a single simulated subject}
+
+\item{sigma}{noise to use when generating representativeness from severity}
 }
 \value{
 result_i, a data frame of years of time for row i

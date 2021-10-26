@@ -4,7 +4,7 @@
 \alias{diagnose_cross_sectional}
 \title{Diagnose Cross-sectional dataset}
 \usage{
-diagnose_cross_sectional(df, theta = c(-10, 20, -5))
+diagnose_cross_sectional(df, theta = c(-12, 20, -3))
 }
 \arguments{
 \item{df}{cross-sectional dataset}

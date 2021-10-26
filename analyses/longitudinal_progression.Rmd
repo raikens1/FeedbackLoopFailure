@@ -12,6 +12,7 @@ library(tidyverse)
 library(ggpubr)
 library(knitr)
 library(binom)
+library(RColorBrewer)
 
 theme_set(theme_light())
 
@@ -22,7 +23,7 @@ n <- 50000
 
 Now let's imagine we're dealing with a disease that begins at a low severity and progresses every year.  We'll assume that severity progresses from 0 to 1 according to a sigmoid function with the following parameters: 
 
-$$R_i(t) = \frac{1}{1 + e^{-\beta_i(t - T_i)}}.$$
+$$S_i(t) = \frac{1}{1 + e^{-\beta_i(t - T_i)}}.$$
 Here, $\beta_i$ and $T_i$ are intrinsic to the individual:
 
 \begin{itemize}
@@ -55,6 +56,12 @@ ggarrange(a, b, ncol = 1)
 
 Inessense, most people have a gradual disease progression ($\mathbb{E}[\beta_i] = 0.25$), and the disease tends to hit intermediate severity at about age 50 ($\mathbb{E}[T_i] = 50$).
 
+Underlying severity is related to - but not exactly in correspondence with - symptom representativeness, $R_i(t)$. Severity, $S_i(t)$, describes the underlying disease state, while representativeness, $R_i(t)$, describes the observable symptoms and how well they match a "textbook" description of the disease.  We'll simulate $R_i(t)$ as a more noisy version of $S_i(t)$:
+
+$$R_i(t) = \frac{1}{1 + e^{-\beta_i(t + \epsilon_{ti} - T_i)}}.$$
+Where 
+$$\epsilon_{ti} \sim_{iid} N(0, 1).$$
+
 \pagebreak
 
 ## Illustrative example
@@ -63,13 +70,25 @@ Here's a quick example dataset of 20 individuals.  The plot below shows disease 
 
 ```{r}
 set.seed(123)
-eg_long <- generate_longitudinal(n = 20)
+eg_long <- generate_longitudinal(n = 20, sigma = 2)
 ```
 
 ```{r}
 ggplot(eg_long, aes(x = t, y = severity, group = id, color = as.factor(x))) +
   geom_line() +
   scale_color_brewer(palette = "Set1")
+```
+
+```{r}
+eg_long %>%
+  filter(id == 1) %>%
+  select(id, t, severity, representativeness) %>%
+  pivot_longer(cols = c(severity, representativeness),
+               names_to = "name", values_to = "value") %>%
+ggplot(aes(x = t, y = value, group = name, alpha = name)) +
+  geom_line(color = "#E41A1C") +
+  scale_alpha_manual(values = c(1, 0.5)) +
+  theme(legend.title = element_blank(), axis.title.y = element_blank())
 ```
 
 \pagebreak
@@ -96,7 +115,7 @@ The way this plays out is that most people are diagnosed at some point early in 
 
 
 ```{r}
-eg_diagnosed <- diagnose_longitudinal(eg_long, theta = c(-10, 20, 0))
+eg_diagnosed <- test_longitudinal(eg_long, theta = c(-12, 20, 0))
 
 diagnosis_pts <- eg_diagnosed %>%
   group_by(id) %>%
@@ -117,17 +136,17 @@ Now, let's suppose that the probability of diagnosis depends on representativene
 
 $$\phi(R_i, X_i) = \frac{1}{1 + exp(-(\beta_0 + \beta_1R_i + \beta_2X_i))} - c_{x_i},$$
 
-where again, $c_{x_i} = \frac{1}{1 + exp(-(\beta_0 + \beta_2X_i))}$ is a corrective constant to ensure that $\phi(0, X_i) = 0$. Also, let $\beta_2 = -5$.
+where again, $c_{x_i} = \frac{1}{1 + exp(-(\beta_0 + \beta_2X_i))}$ is a corrective constant to ensure that $\phi(0, X_i) = 0$. Also, let $\beta_2 = -3$.
 
 Inessence, this means that people with $X_i = 0$ are diagnosed in the same way as above, but people with $X_i = 1$ are diagnosed with a lower probability, shown below:
 
 ```{r, fig.height=3, fig.width=3}
-plt_data <- expand.grid(S, c(0,1)) %>%
-  rename(S = Var1, X = Var2) %>%
-  mutate(phi = 1/(1 + exp(-(20*S - 5 * X - 10)))) %>%
+plt_data <- expand.grid(R, c(0,1)) %>%
+  rename(R = Var1, X = Var2) %>%
+  mutate(phi = 1/(1 + exp(-(20*R - 3 * X - 12)))) %>%
   mutate(X = as.factor(X))
 
-ggplot(data = plt_data, aes(x = S, y = phi, group = X, color = X)) +
+ggplot(data = plt_data, aes(x = R, y = phi, group = X, color = X)) +
   geom_line() + xlim(c(0,1)) + ylim(c(0,1)) + coord_fixed() +
   scale_color_brewer(palette = "Set1")
 ```
@@ -135,7 +154,7 @@ ggplot(data = plt_data, aes(x = S, y = phi, group = X, color = X)) +
 An example of how this plays out is shown below on a subset of the data.  People with $X = 0$ tend to be diagnosed earlier in their disease progression than people with $X = 1$.
 
 ```{r}
-eg_diagnosed <- diagnose_longitudinal(eg_long)
+eg_diagnosed <- test_longitudinal(eg_long, theta = c(-12, 20, -3))
 
 diagnosis_pts <- eg_diagnosed %>%
   group_by(id) %>%
@@ -192,7 +211,7 @@ long_df <- generate_longitudinal(n = n)
 ```
 
 ```{r}
-full_long_df <- diagnose_longitudinal(long_df)
+full_long_df <- test_longitudinal(long_df)
 
 observed_long_df <- full_long_df %>%
   filter(diagnosed == T)

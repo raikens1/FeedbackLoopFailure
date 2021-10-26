@@ -135,10 +135,11 @@ generate_cs_with_doctors <- function(patients_per_doc,
 #' which varies between individuals.
 #'
 #' @param n sample size
+#' @param sigma noise to use when generating representativeness from severity
 #'
 #' @return a data.frame in long-form
 #' @export
-generate_longitudinal <- function(n = 10000){
+generate_longitudinal <- function(n = 10000, sigma = 2){
   # TODO (enhancement): this could probabily be made much faster with expand.grid(id, t =
   # 1:100) and then joining with beta, T, and disease
   start <- data.frame(
@@ -149,13 +150,11 @@ generate_longitudinal <- function(n = 10000){
     t = 0,
     id = 1:n
   )
-  # TODO: For now, just setting representatives = severity so code will run
-  # In the long run, want to relate the two with some random noise
+
   result <- start %>%
     rowwise() %>%
-    do(extend_longitudinal_i(.)) %>%
-    ungroup() %>%
-    mutate(representativeness = severity)
+    do(extend_longitudinal_i(., sigma)) %>%
+    ungroup()
 
   return(result)
 }
@@ -165,17 +164,21 @@ generate_longitudinal <- function(n = 10000){
 #' Helper function for generate_longitudinal.
 #'
 #' @param row_i row of starting parameters for a single simulated subject
+#' @inheritParams generate_longitudinal
 #'
 #' @return result_i, a data frame of years of time for row i
 #' @export
-extend_longitudinal_i <- function(row_i){
+extend_longitudinal_i <- function(row_i, sigma){
+  # TODO: make the noise a modifiable parameter
   result_i <- data.frame(id = row_i$id,
                          x = row_i$x,
                          disease = row_i$disease,
                          beta = row_i$beta,
                          T_shift = row_i$T_shift,
-                         t = 0:100) %>%
-    mutate(severity = severity_fn(t, beta, T_shift))
+                         t = 0:100,
+                         noise = rnorm(101, sd = sigma)) %>%
+    mutate(severity = severity_fn(t, beta, T_shift),
+           representativeness = severity_fn(t + noise, beta, T_shift))
 
   return(result_i)
 }

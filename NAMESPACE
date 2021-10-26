@@ -2,7 +2,6 @@
 
 export(diagnose_cross_sectional)
 export(diagnose_cs_with_doctors)
-export(diagnose_longitudinal)
 export(diagnosis_fn)
 export(diagnosis_fn_by_betas)
 export(extend_longitudinal_i)
@@ -13,4 +12,5 @@ export(generate_cs_with_doctors)
 export(generate_longitudinal)
 export(severity_fn)
 export(test_cross_sectional)
+export(test_longitudinal)
 importFrom(magrittr,"%>%")

@@ -4,10 +4,12 @@
 \alias{generate_longitudinal}
 \title{Generate Longitudinal Data Set}
 \usage{
-generate_longitudinal(n = 10000)
+generate_longitudinal(n = 10000, sigma = 2)
 }
 \arguments{
 \item{n}{sample size}
+
+\item{sigma}{noise to use when generating representativeness from severity}
 }
 \value{
 a data.frame in long-form
