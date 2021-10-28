@@ -70,7 +70,7 @@ generate_cs_beta <- function(n = 10000, prevalence = 0.1){
 #' @return data frame of n individuals with baseline binary covariate x, disease
 #'   status, and continuous disease representativeness
 #' @export
-generate_cs_case4 <- function(n = 10000, prevalence = 0.1){
+generate_cs_case3 <- function(n = 10000, prevalence = 0.1){
 
   if(length(prevalence) == 1){
     prevalence <- c(prevalence, prevalence)
@@ -83,8 +83,8 @@ generate_cs_case4 <- function(n = 10000, prevalence = 0.1){
     dplyr::mutate(disease = ifelse(x == 0, disease0, disease1)) %>%
     dplyr::select(-c(disease0, disease1)) %>%
     dplyr::mutate(representativeness_control = rbeta(n, 1, 5),
-                  representativeness_0 = rbeta(n, 5, 2.5),
-                  representativeness_1 = rbeta(n, 5, 4)) %>%
+                  representativeness_1 = rbeta(n, 5, 2.5),
+                  representativeness_0 = rbeta(n, 5, 4)) %>%
     dplyr::mutate(representativeness = dplyr::case_when(disease == 0 ~ representativeness_control,
                                        disease == 1 & x == 0 ~ representativeness_0,
                                        disease == 1 & x == 1 ~ representativeness_1,

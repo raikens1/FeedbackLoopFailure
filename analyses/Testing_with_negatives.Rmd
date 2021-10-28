@@ -519,7 +519,7 @@ We'll build off the scenario in case 1 (group membership does not affect disease
 \end{align*}
 
 ```{r}
-df <- generate_cs_case4(n = N, prevalence = 0.1) %>%
+df <- generate_cs_case3(n = N, prevalence = 0.1) %>%
   mutate(status = case_when(disease == 0 ~ "No disease",
                             disease == 1 & x == 0 ~ "Disease, X = 0",
                             disease == 1 & x == 1 ~ "Disease, X = 1",

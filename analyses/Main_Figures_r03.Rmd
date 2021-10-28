@@ -80,7 +80,7 @@ a <- ggplot(data = data.frame(R), aes(x = R, y = diagnosis_fn(R, 0, theta = c(-1
 
 b <- expand.grid(R, c(0,1)) %>%
   rename(R = Var1, X = Var2) %>%
-  mutate(phi = diagnosis_fn(representativeness = R, x = X, theta = c(-15, 20, 3))) %>%
+  mutate(phi = diagnosis_fn(representativeness = R, x = X, theta = c(-13, 20, 3))) %>%
   mutate(X = as.factor(X)) %>%
   ggplot(aes(x = R, y = phi, group = X, color = X)) +
   geom_line(size = 1.1) +
@@ -227,7 +227,7 @@ ggsave("figures/case1.pdf", p, width = 8, height = 7.5)
 ```{r}
 df <- generate_cs_beta(N, prevalence = 0.1)
 
-df_tested <- test_cross_sectional(df, theta = c(-15, 20, 3))
+df_tested <- test_cross_sectional(df, theta = c(-13, 20, 3))
 ```
 
 ```{r fig.height=3, fig.width=3}
@@ -431,7 +431,7 @@ ggsave("figures/case2b.pdf", p, width = 9, height = 7.5)
 ## Case 3
 
 ```{r}
-df <- generate_cs_case4(n = N, prevalence = 0.1)
+df <- generate_cs_case3(n = N, prevalence = 0.1)
 ```
 
 
@@ -459,7 +459,7 @@ a <- ggplot(plt_data, aes(x = status, y = Incidence, fill = x, group = x, alpha 
   labs(title = "Disease incidence") +
   xlab("")+
   scale_alpha_manual(values = c(0.5, 1), guide = "none") + 
-  scale_fill_brewer(palette = "Set1", direction = -1, guide = "none") +
+  scale_fill_brewer(palette = "Set1", guide = "none") +
   ylim(c(0,0.2))
 ```
 
@@ -478,7 +478,7 @@ b <- ggplot(plt_data, aes(x = representativeness, group = group, alpha = group, 
   geom_histogram(position = "identity") +
   scale_alpha_manual(values = c(1, 0.5), guide = "none") +
   labs(title = "Distribution of representativeness", x = "Representativeness", y = "Number of individuals") +
-    scale_fill_brewer(palette = "Set1", direction = -1, guide = "none") +
+    scale_fill_brewer(palette = "Set1", guide = "none") +
   facet_wrap(~ x, labeller = labeller(x = x.labs)) +
   theme(strip.text.x = element_text(size = 12, face = "bold"), panel.spacing = unit(1, "lines"))
 
@@ -552,7 +552,7 @@ eg_long <- filter(long_100, id %in% eg_ids)
 ```
 
 ```{r}
-eg_diagnosed <- test_longitudinal(eg_long, theta = c(-15, 20, 5))
+eg_diagnosed <- test_longitudinal(eg_long, theta = c(-13, 20, 3))
 
 diagnosis_pts <- eg_diagnosed %>%
   group_by(id) %>%
