@@ -9,7 +9,8 @@ test_longitudinal(df, theta = c(-12, 20, -3))
 \arguments{
 \item{df}{longitudinal dataset}
 
-\item{theta}{parameters for diagnosis function}
+\item{theta, }{specification for diagnosis function.  If "truth", p_diagnose
+is the true probability that the individual has the disease given X and R}
 }
 \value{
 diagnosed longitudinal data set.

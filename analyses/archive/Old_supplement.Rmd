@@ -1,0 +1,269 @@
+---
+title: "Web Appendix"
+author: "Aikens, Baiocchi, Chen, and Simard"
+output:
+    pdf_document:
+      toc: true
+      toc_depth: 2
+---
+
+```{r setup, warning=FALSE, message = FALSE, include = FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE, fig.align = "center", fig.height = 3)
+library(confirmationBias)
+library(tidyverse)
+library(ggpubr)
+library(knitr)
+library(binom)
+library(formattable)
+library(RColorBrewer)
+
+set.seed(126)
+
+theme_set(theme_light())
+
+inline_hook <- function(x) {
+  if (is.numeric(x)) {
+    format(x, scientific = F, digits = 2)
+  } else x
+}
+knitr::knit_hooks$set(inline = inline_hook)
+
+blankplot <- ggplot() + theme_void()
+
+cases_color <- "#715D84"
+controls_color <- "#66C2A5"
+controls_text_color <- "#488b76"
+undiagnosed_color <- "#6A9C99" 
+x0_color <- "#E41A1C" # Red
+x1_color <- "#377EB8" # Blue
+
+x.labs = c("FALSE" = "X = 0", "TRUE" = "X = 1")
+
+N <- 100000
+```
+
+\pagebreak
+
+# Supplemental detail on the simulation settings
+
+## Clinical selection process for simulated cases 1-3
+
+The models for the probability of evaluation for each case are shown visually in figure 2 from the main text.  Here we give the exact formulae.  The probability of evaluation given representativeness, $R_i$ (and possibly $X_i$) is given based on a sigmoid function.  For case 1 and case 3, this function is:
+
+$$P(\text{evaluation}| R_i) = \frac{1}{1 + exp(-(\beta_0 + \beta_1R_i))} - c,$$
+Where $\beta_1 = 20$ and $\beta_0 = -12$. Here, $c = \frac{1}{1 + exp(-\beta_0)}$ is a corrective constant to ensure that $P(\text{evaluation}| R_i) = 0$.
+
+In case 2, probability of evaluation additionally depends on $X_i$.  The relevant function is:
+
+$$P(\text{evaluation}| R_i, X_i) = \frac{1}{1 + exp(-(\beta_0 + \beta_1R_i + \beta_2X_i))} - c_{x_i},$$
+In case 2A, $\beta_0 = -13$, $\beta_1 = 20$, and $\beta_2 = -3$.  In case 2B, $\beta_0$, $\beta_1$, and $\beta_2$ are taken to be the parameter estimates from a logistic regression model fit based on the ground-truth disease information for a simulated "historic" dataset of $N = 100000$ individuals.  For each subcase, $c_{x_i} = \frac{1}{1 + exp(-(\beta_0 + \beta_2X_i))}$ is again a corrective constant to ensure that $P(\text{evaluated}| R_i(t), X_i) = 0$.  Note that $c_{x_i}$ is calculated based on $\beta_0$, $\beta_1$, and $\beta_2$, so the value of this quantity differs between cases.
+
+## Longitudinal simulation setting
+
+This section contains further detail on the data-generation for the longitudinal simulation example.
+
+### Disease model
+
+In the longitudinal setting, we simulate a set of disease cases which become more severe over time.  The disease progression of each individual is defined by a function, $S_i(t)$ denoting the severity of the (untreated) disease of individual $i$ at time $t$. $S_i(t)$ takes on values from 0 to 1, with a value of 0 representing no severity and a value of 1 representing a highly severe case.  (In the main text, the function notation with respect to $t$ is dropped for notational simplicity, and $S_i$ is taken to be a realization of $S_i(t)$ at some specific time.)
+
+Severity progresses from 0 to 1 according to a sigmoid function with the following parameters: 
+
+$$S_i(t) = \frac{1}{1 + e^{-\beta_i(t - T_i)}}.$$
+Here, $\beta_i$ and $T_i$ are disease-progression parameters intrinsic to the individual:
+
+\begin{itemize}
+  \item $\beta_i$ is the slope of progression. A larger $\beta_i$ indicates a quickly progressing disease.
+  \item $T_i$ controlls the time of onset.  $T_i$ is the time when severity reaches $0.5$
+\end{itemize}
+
+We simulate $\beta_i$ and $T_i$ from the following distributions:
+
+\begin{align*}
+\beta_i &\sim_{iid} \text{Beta}(\alpha = 2, \beta = 6)\\
+T_i &\sim_{iid} \text{Normal}(\mu = 50, \sigma = 5)
+\end{align*}
+
+This means that most people have a gradual disease progression ($\mathbb{E}[\beta_i] = 0.25$), and the disease tends to hit intermediate severity at about $t = 50$ ($\mathbb{E}[T_i] = 50$).  Note that $T_i$ and $\beta_i$ are generated from the same distribution regardless of the background characteristic, $X_i$.  This means that the disease _progression_ is not systematically different between $X$ groups (although it does not necessitate that the disease _incidences_ are the same between these groups).
+
+Individuals are diagnosed not based on severity but on representativeness of their symptoms. In this setting, we denote representativeness as a function of time, $R_i(t)$ (although the function notation is dropped in the main text). Underlying severity is related to -- but not the same as -- symptom representativeness. Severity, $S_i(t)$, describes the underlying disease state, while representativeness, $R_i(t)$, describes the observable symptoms and how well they match a "textbook" description of the disease.  For the longitudinal simulation _only_, we simulate $R_i(t)$ as a more noisy version of $S_i(t)$:
+
+$$R_i(t) = \frac{1}{1 + e^{-\beta_i(t + \epsilon_{ti} - T_i)}}.$$
+Where 
+$$\epsilon_{ti} \sim_{iid} N(0, 1).$$
+
+Inessense, this means that representativeness at any time corresponds roughly to severity, but that this relationship is staggered with some noise.
+
+### Clinical selection process
+
+At each time-point, $t$, each individual has an opportunity to be selected for diagnostic evaluation based on the representativeness of their symptoms. As in cases 1-3, if the individual is selected for diagnostic evaluation, they recieve a diagnosis; otherwise they remain diagnosed (at least until the next time point). The probability of being selected for diagnostic evaluation at any given time point is the same as in Case 2A:
+
+$$P(\text{evaluation}| R_i(t), X_i) = \frac{1}{1 + exp(-(\beta_0 + \beta_1R_i(t) + \beta_2X_i))} - c_{x_i},$$
+where $\beta_0 = -13$, $\beta_1 = 20$, and $\beta_2 = -3$. As before $c_{x_i} = \frac{1}{1 + exp(-(\beta_0 + \beta_2X_i))}$ is a corrective constant to ensure that $P(\text{evaluated}| R_i(t), X_i) = 0$. 
+
+\pagebreak
+
+# Supplementary Figures
+
+```{r density plots, fig.width=8, fig.height=6, fig.cap = "Probability densities used to simulate representativeness for Cases 1 and 2 (A) and Case 3 (B)"}
+R <- seq(0, 1, length.out = 10000)
+
+case1_betas <- tibble(representativeness = c(R, R),
+                      density = c(dbeta(R, 5, 2.5), dbeta(R, 1, 5)),
+                      disease = as.logical(c(rep(1, 10000), rep(0, 10000))))
+
+case1_density <- ggplot(case1_betas, aes(x = representativeness, y = density,
+                                         fill = disease, group = disease,
+                                         color = disease, alpha = disease)) +
+  geom_line() + 
+  geom_area(position = "identity") +
+  scale_fill_manual(values = c(controls_color, cases_color), labels = c("No disease   ", "Disease")) +
+  scale_color_manual(values = c(controls_color, cases_color), labels = c("No disease   ", "Disease")) +
+  scale_alpha_manual(values = c(0.5, 0.5), labels = c("No disease   ", "Disease")) +
+  ggtitle("Case 1, Case 2 (A and B)") + 
+  theme(legend.position = "right", legend.title = element_blank()) +
+  xlab("Representativeness") +
+  ylab("Density") +
+  scale_x_continuous(expand = c(0.025, 0))
+
+case3_betas <- tibble(representativeness = c(R, R, R),
+                      density = c(dbeta(R, 1, 5), dbeta(R, 5, 4), dbeta(R, 5, 2.5)),
+                      status = c(rep("No disease", 10000), rep("Disease, X = 0", 10000), rep("Disease, X = 1", 10000))) %>%
+  mutate(status = factor(status, levels = c("No disease", "Disease, X = 0", "Disease, X = 1")))
+
+case3_density <- ggplot(case3_betas, aes(x = representativeness, y = density,
+                                         fill = status, group = status,
+                                         color = status, alpha = status)) +
+  geom_line() + 
+  geom_area(position = "identity") +
+  scale_fill_manual(values = c(controls_color, x0_color, x1_color)) +
+  scale_color_manual(values = c(controls_color, x0_color, x1_color)) +
+  scale_alpha_manual(values = c(0.4, 0.4, 0.4)) +
+  ggtitle("Case 3") + 
+  theme(legend.position = "right", legend.title = element_blank()) +
+  xlab("Representativeness") +
+  ylab("Density") +
+  scale_x_continuous(expand = c(0.025, 0))
+
+ggarrange(case1_density, case3_density, ncol = 1, nrow = 2, common.legend = F,  legend = "right", labels = "AUTO")
+```
+
+
+```{r fig.width=8, fig.height=4.5}
+df_model <- generate_cs_beta(prevalence = c(0.075, 0.15), n = N)
+
+good_model <- glm(disease ~ representativeness + x, data = df_model, family = binomial())
+
+theta_start <- coef(good_model)
+
+df <- generate_cs_beta(N, prevalence = 0.1)
+
+df_tested <- test_cross_sectional(df, theta = c(-13, 20, 3)) %>%
+  mutate(status = case_when(!disease ~ "No disease",
+                            !x ~ "Disease, X = 0   ",
+                            x ~ "Disease, X = 1"),
+         obs_status = case_when(!diagnosed ~ "No diagnosis",
+                                !x ~ "Diagnosis, X = 0",
+                                x ~ "Diagnosis, X = 1")) %>%
+  mutate(status = factor(status, levels = c("No disease", "Disease, X = 0   ", "Disease, X = 1")),
+         obs_status = factor(obs_status, levels = c("No diagnosis", "Diagnosis, X = 0", "Diagnosis, X = 1")))
+
+case2A_actual <- ggplot(df_tested, aes(x = representativeness, fill = status, group = status, color = status, alpha = status)) +
+  geom_density() + 
+  scale_fill_manual(values = c(controls_color, x0_color, x1_color)) +
+  scale_color_manual(values = c(controls_color, x0_color, x1_color)) +
+  scale_alpha_manual(values = c(0.4, 0.4, 0.4)) +
+  ggtitle("Case 2A: Disease vs no disease") + 
+  theme(legend.position = "right", legend.title = element_blank(),
+        plot.title = element_text(size = 10)) +
+  xlab("Representativeness") +
+  ylab("Density") +
+  scale_x_continuous(expand = c(0.025, 0))
+
+case2A_observed <- ggplot(df_tested, aes(x = representativeness, fill = obs_status, group = obs_status, color = obs_status, alpha = obs_status)) +
+  geom_density() + 
+  scale_fill_manual(values = c(undiagnosed_color, x0_color, x1_color)) +
+  scale_color_manual(values = c(undiagnosed_color, x0_color, x1_color)) +
+  scale_alpha_manual(values = c(0.5, 0.85, 0.85)) +
+  ggtitle("Case 2A: Diagnosis vs no diagnosis") +
+  theme(legend.position = "right", legend.title = element_blank(),
+        plot.title = element_text(size = 10))  +
+  xlab("Representativeness")+
+  ylab("Density") +
+  scale_x_continuous(expand = c(0.025, 0))
+
+df <- generate_cs_beta(prevalence = c(0.075, 0.15), n = N)
+
+df_tested <- test_cross_sectional(df, theta = theta_start) %>%
+  mutate(status = case_when(!disease ~ "No disease",
+                            !x ~ "Disease, X = 0   ",
+                            x ~ "Disease, X = 1"),
+         obs_status = case_when(!diagnosed ~ "No diagnosis",
+                                !x ~ "Diagnosis, X = 0",
+                                x ~ "Diagnosis, X = 1")) %>%
+  mutate(status = factor(status, levels = c("No disease", "Disease, X = 0   ", "Disease, X = 1")),
+         obs_status = factor(obs_status, levels = c("No diagnosis", "Diagnosis, X = 0", "Diagnosis, X = 1")))
+
+case2B_actual <- ggplot(df_tested, aes(x = representativeness, fill = status, group = status, color = status, alpha = status)) +
+  geom_density() + 
+  scale_fill_manual(values = c(controls_color, x0_color, x1_color)) +
+  scale_color_manual(values = c(controls_color, x0_color, x1_color)) +
+  scale_alpha_manual(values = c(0.4, 0.4, 0.4)) +
+  ggtitle("Case 2B: Disease vs no disease") + 
+  theme(legend.position = "right", legend.title = element_blank(),
+        plot.title = element_text(size = 10)) +
+  xlab("Representativeness") +
+  ylab("Density") +
+  scale_x_continuous(expand = c(0.025, 0))
+
+case2B_observed <- ggplot(df_tested, aes(x = representativeness, fill = obs_status, group = obs_status, color = obs_status, alpha = obs_status)) +
+  geom_density() + 
+  scale_fill_manual(values = c(undiagnosed_color, x0_color, x1_color)) +
+  scale_color_manual(values = c(undiagnosed_color, x0_color, x1_color)) +
+  scale_alpha_manual(values = c(0.5, 0.85, 0.85)) +
+  ggtitle("Case 2B: Diagnosis vs no diagnosis") +
+  theme(legend.position = "right", legend.title = element_blank(),
+        plot.title = element_text(size = 10))  +
+  xlab("Representativeness")+
+  ylab("Density") +
+  scale_x_continuous(expand = c(0.025, 0)) 
+
+df <- generate_cs_case3(n = N, prevalence = 0.1)
+df_tested <- test_cross_sectional(df, theta = c(-12, 20, 0)) %>%
+  mutate(status = case_when(!disease ~ "No disease",
+                            !x ~ "Disease, X = 0   ",
+                            x ~ "Disease, X = 1"),
+         obs_status = case_when(!diagnosed ~ "No diagnosis",
+                                !x ~ "Diagnosis, X = 0",
+                                x ~ "Diagnosis, X = 1")) %>%
+  mutate(status = factor(status, levels = c("No disease", "Disease, X = 0   ", "Disease, X = 1")),
+         obs_status = factor(obs_status, levels = c("No diagnosis", "Diagnosis, X = 0", "Diagnosis, X = 1")))
+
+case3_actual <- ggplot(df_tested, aes(x = representativeness, fill = status, group = status, color = status, alpha = status)) +
+  geom_density() + 
+  scale_fill_manual(values = c(controls_color, x0_color, x1_color)) +
+  scale_color_manual(values = c(controls_color, x0_color, x1_color)) +
+  scale_alpha_manual(values = c(0.4, 0.4, 0.4)) +
+  ggtitle("Case 3: Disease vs no disease") + 
+  theme(legend.position = "right", legend.title = element_blank(),
+        plot.title = element_text(size = 10)) +
+  xlab("Representativeness") +
+  ylab("Density") +
+  scale_x_continuous(expand = c(0.025, 0))
+
+case3_observed <- ggplot(df_tested, aes(x = representativeness, fill = obs_status, group = obs_status, color = obs_status, alpha = obs_status)) +
+  geom_density() + 
+  scale_fill_manual(values = c(undiagnosed_color, x0_color, x1_color)) +
+  scale_color_manual(values = c(undiagnosed_color, x0_color, x1_color)) +
+  scale_alpha_manual(values = c(0.5, 0.85, 0.85)) +
+  ggtitle("Case 3: Diagnosis vs no diagnosis") +
+  theme(legend.position = "right", legend.title = element_blank(),
+        plot.title = element_text(size = 10))  +
+  xlab("Representativeness")+
+  ylab("Density") +
+  scale_x_continuous(expand = c(0.025, 0))
+
+
+ggarrange(ggarrange(case2A_actual, case2B_actual, case3_actual, nrow = 1, ncol = 3, common.legend = TRUE, legend = "bottom"), 
+          ggarrange(case2A_observed, case2B_observed, case3_observed, nrow = 1, ncol = 3, common.legend = TRUE, legend = "bottom"),
+          ncol = 1, nrow = 2)
+```

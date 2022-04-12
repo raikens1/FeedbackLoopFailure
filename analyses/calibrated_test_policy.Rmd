@@ -1,0 +1,81 @@
+---
+title: "A perfectly calibrated diagnostic function"
+author: "Rachael Caelie (Rocky) Aikens"
+date: "12/6/2021"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Setup
+
+Consider the setup for Case 2:
+
+\begin{align*}
+    Z_i|X_i = 1 &\sim_{iid} \text{Bernoulli}(0.15)\\
+    Z_i|X_i = 0 &\sim_{iid} \text{Bernoulli}(0.075)\\
+    R_i|Z_i = 1 &\sim_{iid} \text{Beta}(5, 2.5)\\
+    R_i|Z_i = 0 &\sim_{iid} \text{Beta}(1, 5)
+\end{align*}
+
+What defines an "ideal" diagnostic function depends on the goals of diagnosis: do we want to minimize false positives?  False negatives?  Are there general costs to the test that we would like to avoid?  Are there fairness criteria we are concerned about?
+
+However, one reasonable approach would be to ensure that the policy deciding whom to test should be well-calibrated.  That is, the probability that a person is tested should be equal (or, more generally, proportional) to the probability that the person has the disease.
+
+Since we know the underlying data-generating process, we can actually derive that from first principals:
+
+\begin{align*}
+    P(Z = 1 | R = r, X = x) &= \frac{P(R = r | Z = 1, X = x)P(Z = 1|X = x)}{P(R = r|X = x)} \\
+    &= \frac{P(R = r | Z = 1)P(Z = 1|X = x)}{P(R = r|Z = 1)P(Z = 1|X = x) + P(R = r|Z = 0)P(Z = 0|X = x)}\\
+    &= \frac{Beta_{5, 2.5}(r)P(Z = 1|X = x)}{Beta_{5, 2.5}(r)P(Z = 1|X = x) + Beta_{1, 5}(r)P(Z = 0|X = x)}
+\end{align*}
+
+where $Beta_{a,b}$ represents the p.d.f of a Beta distribution with parameters $a$ and $b$.
+
+We can calculate this analytically in R:
+
+```{r}
+calibrated_test_p <- function(R, X){
+  pz_given_x <- ifelse(X == 1, 0.15, 0.075)
+  pr_given_z1 <- dbeta(R, 5, 2.5)
+  pr_given_z0 <- dbeta(R, 1, 5)
+  
+  return(pr_given_z1 * pz_given_x / (pr_given_z1 * pz_given_x + pr_given_z0 * (1 - pz_given_x)))
+}
+```
+
+```{r}
+R <- seq(0, 1, length.out = 10000)
+
+c <- expand.grid(R, c(0,1)) %>%
+  rename(R = Var1, X = Var2) %>%
+  mutate(phi = calibrated_test_p(R, X)) %>%
+  mutate(X = as.factor(X)) %>%
+  ggplot(aes(x = R, y = phi, group = X, color = X)) +
+  geom_line(size = 1.1) +
+  xlim(c(0,1)) +
+  ylim(c(0,1)) +
+  coord_fixed() +
+  scale_color_brewer(palette = "Set1", labels = c("X = 0", "X = 1")) +
+  ylab("P(Evaluated | R)") +
+  ggtitle("Case 2B") +
+  theme(legend.title = element_blank())
+
+c
+
+c <- tibble(R) %>%
+  mutate(phi = calibrated_test_p(R, 1)/calibrated_test_p(R, 0)) %>%
+  ggplot(aes(x = R, y = phi)) +
+  geom_line(size = 1.1) +
+  xlim(c(0,1)) +
+  coord_fixed() +
+  ylab("Relative rate of evaluation X = 1 vs X = 0") +
+  ggtitle("Case 2B") +
+  theme(legend.title = element_blank())
+
+c
+```
+
+

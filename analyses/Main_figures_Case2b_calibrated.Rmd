@@ -65,15 +65,18 @@ df <- generate_cs_beta(n = N) %>%
   mutate(status = case_when(!disease ~ "No disease",
                             !x ~ "Disease, X = 0",
                             x ~ "Disease, X = 1")) %>%
-  mutate(status = factor(status, levels = c("No disease", "Disease, X = 0", "Disease, X = 1")))
+  mutate(status = factor(status, levels = c("No disease", "Disease, X = 0", "Disease, X = 1"))) %>%
+  mutate(status_case1 = ifelse(!disease, "No disease", "Disease, both X = 0 and X = 1")) %>%
+  mutate(status_case1 = factor(status_case1,
+                               levels = c("No disease", "Disease, both X = 0 and X = 1", "Disease, X = 0", "Disease, X = 1")))
 
 
-case1_hist <- ggplot(df, aes(x = representativeness, y = stat(count), fill = disease, group = disease, color = disease, alpha = disease)) +
+case1_hist <- ggplot(df, aes(x = representativeness, y = stat(count), fill = status_case1, group = status_case1, color = status_case1, alpha = status_case1)) +
   geom_histogram(dat = filter(df, disease == 0), position = "identity") + 
   geom_histogram(dat = filter(df, disease == 1), aes(x = representativeness, y = stat(count)* 10), position = "identity") +
-  scale_fill_manual(values = c(controls_color, cases_color), labels = c("No disease   ", "Disease")) +
-  scale_color_manual(values = c(controls_color, cases_color), labels = c("No disease   ", "Disease")) +
-  scale_alpha_manual(values = c(0.5, 0.5), labels = c("No disease   ", "Disease")) +
+  scale_fill_manual(values = c(controls_color, cases_color, x0_color, x1_color), drop = F) +
+  scale_color_manual(values = c(controls_color, cases_color, x0_color, x1_color), drop = F) +
+  scale_alpha_manual(values = c(0.4, 0.4, 0.4, 0.4), drop = F) +
   ggtitle("Case 1") + 
   theme(legend.position = "right", legend.title = element_blank()) +
   xlab("Representativeness") +
@@ -185,13 +188,19 @@ theta_start <- coef(good_model)
 
 ```{r selection_curves, fig.height=3, fig.width=8}
 R <- seq(0, 1, length.out = 10000)
-a <- ggplot(data = data.frame(R), aes(x = R, y = diagnosis_fn(R, 0, theta = c(-12, 20, 0)))) +
-  geom_line(color = cases_color, size = 1.1) +
+
+a <- data.frame(R = R, phi = diagnosis_fn(R, 0, theta = c(-12, 20, 0))) %>%
+  mutate(X = "Both X = 0 and X = 1") %>%
+  mutate(X = factor(X, levels = c("Both X = 0 and X = 1", "X = 0", "X = 1"))) %>%
+  ggplot(aes(x = R, y = phi, color = X)) +
+  geom_line(size = 1.1) +
+  scale_color_manual(values = c(cases_color, x0_color, x1_color), drop = FALSE) +
   xlim(c(0,1)) +
   ylim(c(0,1)) +
   coord_fixed() +
-  ylab("P(Workup | R)") +
-  ggtitle("Case 1, Case 3")
+  ylab("P(Evaluated | R)") +
+  ggtitle("Case 1, Case 3") +
+  theme(legend.title = element_blank())
 
 b <- expand.grid(R, c(0,1)) %>%
   rename(R = Var1, X = Var2) %>%
@@ -203,8 +212,8 @@ b <- expand.grid(R, c(0,1)) %>%
   ylim(c(0,1)) +
   coord_fixed() +
   scale_color_brewer(palette = "Set1", labels = c("X = 0", "X = 1")) +
-  ylab("P(Workup | R)") +
-  ggtitle("Case 2a, Longitudinal") +
+  ylab("P(Evaluated | R)") +
+  ggtitle("Case 2A, Longitudinal") +
   theme(legend.title = element_blank())
 
 
@@ -218,27 +227,27 @@ c <- expand.grid(R, c(0,1)) %>%
   ylim(c(0,1)) +
   coord_fixed() +
   scale_color_brewer(palette = "Set1", labels = c("X = 0", "X = 1")) +
-  ylab("P(Workup | R)") +
-  ggtitle("Case 2b") +
+  ylab("P(Evaluated | R)") +
+  ggtitle("Case 2B") +
   theme(legend.title = element_blank())
 
 p <- ggarrange(a, b, c, ncol = 3, nrow = 1, common.legend = T,  legend = "bottom", labels = "AUTO")
 ```
 
 ```{r save selection curves}
-ggsave("figures/selection_curves.pdf", p,  width=8, height=3)
+#ggsave("figures/selection_curves.pdf", p,  width=8, height=3)
 ```
 
-```{r figure2 with histograms, fig.width=8, fig.height=7}
+```{r figure2 with histograms, fig.width=8, fig.height=8}
 p <- ggarrange(ggarrange(case1_hist, case2a_hist, case2b_hist, case3_hist,
-                         ncol = 2, nrow = 2, legend = "none", labels = "AUTO"),
+                         ncol = 2, nrow = 2, common.legend = T, legend = "bottom"),
           ggarrange(a, b, c, ncol = 3, nrow = 1, common.legend = T,
-                    legend = "bottom", labels = c("E", "F", "G")), 
-          nrow = 2, ncol = 1, heights = c(3,2))
+                    legend = "bottom"), 
+          nrow = 2, ncol = 1, heights = c(3.5,2), labels = "AUTO")
 
 p
 
-ggsave("figures/setup_histogram.pdf", p,  width=9, height=7)
+#ggsave("figures/setup.pdf", p,  width=9, height=9)
 ```
 
 # Results
@@ -342,10 +351,12 @@ p <- ggarrange(ggarrange(a, b, ncol = 2, nrow = 1, widths = c(3, 7), labels = "A
 ```
 
 ```{r}
-ggsave("figures/case1.pdf", p, width = 8, height = 7.5)
+#ggsave("figures/case1.pdf", p, width = 8, height = 7.5)
 ```
 
-## Case 2a
+## Case 2
+
+### Case 2A
 
 ```{r}
 df <- generate_cs_beta(N, prevalence = 0.1)
@@ -370,7 +381,6 @@ plt_data[3:4,5:6] <- NA
 case2a_incidence <- ggplot(plt_data, aes(x = status, y = Incidence, fill = x, group = x, alpha = status)) +
   geom_col(position = position_dodge(width = 1)) +
   geom_errorbar(aes(ymin = lower, ymax = upper), width = 0.25, position = position_dodge(width = 1)) +
-  labs(title = "Disease incidence") +
   xlab("")+
   scale_alpha_manual(values = c(0.5, 1), guide = "none") + 
   scale_fill_brewer(palette = "Set1", guide = "none") +
@@ -389,7 +399,7 @@ plt_data <- rbind(diseased, diagnosed)
 case2a_rep <- ggplot(plt_data, aes(x = representativeness, group = group, alpha = group, fill = x)) +
   geom_histogram(position = "identity") +
   scale_alpha_manual(values = c(1, 0.5), guide = "none") +
-  labs(title = "Distribution of representativeness", x = "Representativeness", y = "Number of individuals") +
+  labs(x = "Representativeness", y = "Number of individuals") +
     scale_fill_brewer(palette = "Set1", guide = "none") +
   facet_wrap(~ x, labeller = labeller(x = x.labs)) +
   theme(strip.text.x = element_text(size = 12, face = "bold"), panel.spacing = unit(1, "lines"))
@@ -397,14 +407,14 @@ case2a_rep <- ggplot(plt_data, aes(x = representativeness, group = group, alpha 
 #ggarrange(case2a_incidence, case2a_rep, ncol = 2, widths =c(3,7), labels = "AUTO")
 ```
 
-## Case 2b
+### Case 2b
 
 ```{r}
 df <- generate_cs_beta(prevalence = c(0.075, 0.15), n = N)
 ```
 
 ```{r}
-df_tested <- test_cross_sectional(df, theta = theta_start)
+df_tested <- test_cs_case2B_calibrated(df)
 ```
 
 ```{r fig.height=3, fig.width=3}
@@ -424,7 +434,6 @@ plt_data[3:4,5:6] <- NA
 case2b_incidence <- ggplot(plt_data, aes(x = status, y = Incidence, fill = x, group = x, alpha = status)) +
   geom_col(position = position_dodge(width = 1)) +
   geom_errorbar(aes(ymin = lower, ymax = upper), width = 0.25, position = position_dodge(width = 1)) +
-  labs(title = "Disease incidence") +
   xlab("")+
   scale_alpha_manual(values = c(0.5, 1), guide = "none") + 
   scale_fill_brewer(palette = "Set1", guide = "none") +
@@ -443,7 +452,7 @@ plt_data <- rbind(diseased, diagnosed)
 case2b_rep <- ggplot(plt_data, aes(x = representativeness, group = group, alpha = group, fill = x)) +
   geom_histogram(position = "identity") +
   scale_alpha_manual(values = c(1, 0.5), guide = "none") +
-  labs(title = "Distribution of representativeness", x = "Representativeness", y = "Number of individuals") +
+  labs(x = "Representativeness", y = "Number of individuals") +
     scale_fill_brewer(palette = "Set1", guide = "none") +
   facet_wrap(~ x, scales = "free", labeller = labeller(x = x.labs)) +
   theme(strip.text.x = element_text(size = 12, face = "bold"))
@@ -477,16 +486,71 @@ ggarrange(ggarrange(case2a_incidence, case2a_rep, case2b_incidence, case2b_rep,
           ncol = 1, nrow = 2, heights = c(2, 1))
 ```
 
-```{r fig.height=6, fig.width=8}
+```{r fig.height=5, fig.width=8}
 # version without table appended
-ggarrange(case2a_incidence, case2a_rep, case2b_incidence, case2b_rep,
-          ncol = 2, nrow = 2, widths =c(2,3), legend = F, labels = "AUTO")
+p <- ggarrange(ggarrange(case2a_incidence, case2a_rep,
+          ncol = 2, nrow = 1, widths =c(2,3), legend = F),
+          ggarrange(case2b_incidence, case2b_rep,
+          ncol = 2, nrow = 1, widths =c(2,3), legend = F), 
+          ncol = 1, nrow = 2, labels = "AUTO")
 
-# version without table appended
-p <- ggarrange(case2a_incidence, case2a_rep, case2b_incidence, case2b_rep,
-          ncol = 2, nrow = 2, widths =c(2,3), legend = F, labels = "AUTO")
 
-ggsave("figures/case2.pdf", p, width = 8, height = 6)
+p
+
+#ggsave("figures/case2.pdf", p, width = 8, height = 5.5)
+```
+
+
+
+### Table 2
+
+```{r}
+run_case2A <- function(){
+ df <- generate_cs_beta(N, prevalence = 0.1)
+
+df_tested <- test_cross_sectional(df, theta = c(-13, 20, 3))
+
+df_tested %>% group_by(x) %>%
+  mutate(x = ifelse(x, "X1", "X0")) %>%
+  summarize(percent_cases_diagnosed = sum(diagnosed)/sum(disease), est_incidence = sum(diagnosed)/n(), .groups = "drop") %>%
+  pivot_wider(names_from = x, values_from = c(percent_cases_diagnosed, est_incidence)) %>%
+  mutate(est_relative_incidence = est_incidence_X1/est_incidence_X0) 
+}
+
+result_2A <- do.call("rbind", replicate(n = 1000, run_case2A(), simplify = FALSE))
+```
+
+
+```{r}
+run_case2B <- function(){
+  
+  df <- generate_cs_beta(prevalence = c(0.075, 0.15), n = N)
+  
+  df_tested <- test_cs_case2B_calibrated(df)
+  
+  df_tested %>% group_by(x) %>%
+      mutate(x = ifelse(x, "X1", "X0")) %>%
+      summarize(percent_cases_diagnosed = sum(diagnosed)/sum(disease), est_incidence = sum(diagnosed)/n(), .groups = "drop") %>%
+      pivot_wider(names_from = x, values_from = c(percent_cases_diagnosed, est_incidence)) %>%
+      mutate(est_relative_incidence = est_incidence_X1/est_incidence_X0) 
+}
+
+result_2B <- do.call("rbind", replicate(n = 1000, run_case2B(), simplify = FALSE))
+```
+```{r}
+means2A <- result_2A %>% summarize_all(mean)
+means2b <- result_2B %>% summarize_all(mean)
+
+rbind(means2A, means2b) %>%
+  mutate(scenario = c("Case 1", "Case 2")) %>%
+  kable(digits = 3)
+
+sds2A <- result_2A %>% summarize_all(sd)
+sds2b <- result_2B %>% summarize_all(sd)
+
+rbind(sds2A, sds2b) %>%
+  mutate(scenario = c("Case 1", "Case 2")) %>%
+  kable(digits = 4)
 ```
 
 
@@ -517,14 +581,13 @@ plt_data[3:4,5:6] <- NA
 a <- ggplot(plt_data, aes(x = status, y = Incidence, fill = x, group = x, alpha = status)) +
   geom_col(position = position_dodge(width = 1)) +
   geom_errorbar(aes(ymin = lower, ymax = upper), width = 0.25, position = position_dodge(width = 1)) +
-  labs(title = "Disease incidence") +
   xlab("")+
   scale_alpha_manual(values = c(0.5, 1), guide = "none") + 
   scale_fill_brewer(palette = "Set1", guide = "none") +
   ylim(c(0,0.175))
 ```
 
-```{r fig.height=3, fig.width=8}
+```{r fig.height=2.75, fig.width=8}
 x.labs = c("FALSE" = "X = 0", "TRUE" = "X = 1")
 
 diseased <- df_tested %>% filter(disease == TRUE) %>%
@@ -538,19 +601,15 @@ plt_data <- rbind(diseased, diagnosed)
 b <- ggplot(plt_data, aes(x = representativeness, group = group, alpha = group, fill = x)) +
   geom_histogram(position = "identity") +
   scale_alpha_manual(values = c(1, 0.5), guide = "none") +
-  labs(title = "Distribution of representativeness", x = "Representativeness", y = "Number of individuals") +
+  labs(x = "Representativeness", y = "Number of individuals") +
     scale_fill_brewer(palette = "Set1", guide = "none") +
   facet_wrap(~ x, labeller = labeller(x = x.labs)) +
   theme(strip.text.x = element_text(size = 12, face = "bold"), panel.spacing = unit(1, "lines"))
 
-ggarrange(a, b, ncol = 2, widths =c(2,3), legend = F, labels = "AUTO")
-p <- ggarrange(a, b, ncol = 2, widths =c(2,3), legend = F, labels = "AUTO")
-ggsave("figures/case3.pdf", p, width = 8, height = 3)
+p <- ggarrange(a, b, ncol = 2, widths =c(2,3), legend = F)
+p
+#ggsave("figures/case3.pdf", p, width = 8, height = 2.75)
 ```
-
-## Case 4
-
-Finally, we'll consider a situation in which the diagnostic evaluation itself has some error rate.  Suppose the test has a sensitivity and specificity of 95%.
 
 ## Longitudinal disease process
 
@@ -600,5 +659,5 @@ p <- ggplot(eg_diagnosed,
 ```
 
 ```{r}
-ggsave("figures/longitudinal.pdf", p, width = 5, height = 3)
+#ggsave("figures/longitudinal.pdf", p, width = 5, height = 3)
 ```

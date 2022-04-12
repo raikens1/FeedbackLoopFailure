@@ -2,7 +2,7 @@
 % Please edit documentation in R/diagnose_data.R
 \name{diagnosis_fn}
 \alias{diagnosis_fn}
-\title{Calculate Diagnosis Probability}
+\title{Calculate Diagnosis Probability using theta}
 \usage{
 diagnosis_fn(representativeness, x, theta = c(-12, 20, -3))
 }
@@ -11,11 +11,12 @@ diagnosis_fn(representativeness, x, theta = c(-12, 20, -3))
 
 \item{x}{binary covariate}
 
-\item{theta}{numeric vector giving parameters of diagnostic function}
+\item{theta, }{specification for diagnosis function.  If "truth", p_diagnose
+is the true probability that the individual has the disease given X and R}
 }
 \value{
 diagnosis probability between 0 and 1.
 }
 \description{
-Calculate Diagnosis Probability
+Calculate Diagnosis Probability using theta
 }

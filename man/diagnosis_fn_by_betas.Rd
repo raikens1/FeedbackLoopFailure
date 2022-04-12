@@ -2,7 +2,7 @@
 % Please edit documentation in R/diagnose_data.R
 \name{diagnosis_fn_by_betas}
 \alias{diagnosis_fn_by_betas}
-\title{Calculate Diagnosis Probability}
+\title{Calculate Diagnosis Probability using betas}
 \usage{
 diagnosis_fn_by_betas(representativeness, x, b0 = -12, bR = 20, bX = -3)
 }
@@ -21,5 +21,5 @@ diagnosis_fn_by_betas(representativeness, x, b0 = -12, bR = 20, bX = -3)
 diagnosis probability between 0 and 1.
 }
 \description{
-Calculate Diagnosis Probability
+Calculate Diagnosis Probability using betas
 }

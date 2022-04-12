@@ -27,21 +27,30 @@ diagnose_cross_sectional <- function(df, theta = c(-12, 20, -3)){
 #' cross-sectional dataset
 #'
 #' @param df cross-sectional dataset
-#' @param theta, parameters for diagnosis function
+#' @param theta, specification for diagnosis function.  If "truth", p_diagnose
+#'   is the true probability that the individual has the disease given X and R
+#' @param sensitivity sensitivity of test (true positive rate)
+#' @param specificity specificity of test (true negative rate)
 #'
 #' @return diagnosed cross_sectional data set.
 #' @export
-test_cross_sectional <- function(df, theta = c(-12, 20, -3)){
+test_cross_sectional <- function(df, theta = c(-12, 20, -3),
+                                    sensitivity = 1, specificity = 1){
   n_row <- dim(df)[1]
 
   result <- df %>%
     mutate(p_diagnose = diagnosis_fn(representativeness, x, theta)) %>%
-    mutate(tested = rbinom(n_row, size = 1, p = p_diagnose)) %>%
-    mutate(diagnosed = tested & disease)
+    mutate(tested = rbinom(n_row, size = 1, p = p_diagnose),
+           pos_test_given_disease = as.double(rbinom(n_row, 1, p = sensitivity)),
+           pos_test_given_no_disease = 1 - rbinom(n_row, 1, p = specificity)) %>%
+    mutate(diagnosed = as.logical(case_when(
+      !tested ~ 0,
+      tested & disease ~ pos_test_given_disease,
+      tested & !disease ~ pos_test_given_no_disease,
+      TRUE ~ NA_real_)))
 
   return(result)
 }
-
 
 #' Diagnose Cross-sectional dataset with doctor variation
 #'
@@ -73,7 +82,8 @@ diagnose_cs_with_doctors <- function(df){
 #' diagnosis would happen at this time point based on the diagnosis probability.
 #'
 #' @param df longitudinal dataset
-#' @param theta parameters for diagnosis function
+#' @param theta, specification for diagnosis function.  If "truth", p_diagnose
+#'   is the true probability that the individual has the disease given X and R
 #'
 #' @return diagnosed longitudinal data set.
 #' @export
@@ -95,24 +105,35 @@ test_longitudinal <- function(df, theta = c(-12, 20, -3)){
   return(result)
 }
 
-#' Calculate Diagnosis Probability
+#' Calculate Diagnosis Probability using theta
 #'
 #' @param x binary covariate
 #' @param representativeness disease representativeness (in [0,1])
-#' @param theta numeric vector giving parameters of diagnostic function
+#' @param theta, specification for diagnosis function.  If "truth", p_diagnose
+#'   is the true probability that the individual has the disease given X and R
 #'
 #' @return diagnosis probability between 0 and 1.
 #' @export
 diagnosis_fn <- function(representativeness, x, theta = c(-12, 20, -3)){
-  c <- 1/(1 + exp(-(theta[1] + theta[3] * x)))
+  if(length(theta) == 1){
+    if(theta == "truth"){
+      pz_given_x <- ifelse(x == 1, 0.15, 0.075)
+      pr_given_z1 <- dbeta(representativeness, 5, 2.5)
+      pr_given_z0 <- dbeta(representativeness, 1, 5)
 
-  return(1/(1 + exp(-(theta[1] + theta[2] * representativeness + theta[3] * x))) - c)
+      return(pr_given_z1 * pz_given_x / (pr_given_z1 * pz_given_x + pr_given_z0 * (1 - pz_given_x)))
+    }
+    else{stop("invalid value for theta")}
+  } else{
+    c <- 1/(1 + exp(-(theta[1] + theta[3] * x)))
+
+    return(1/(1 + exp(-(theta[1] + theta[2] * representativeness + theta[3] * x))) - c)
+  }
 }
 
-#' Calculate Diagnosis Probability
+#' Calculate Diagnosis Probability using betas
 #'
-#' @param x binary covariate
-#' @param representativeness disease representativeness (in [0,1])
+#' @inheritParams diagnosis_fn
 #' @param b0 beta coefficient for intercept of diagnostic function
 #' @param bR beta coefficient for representativeness in diagnostic function
 #' @param bX beta coefficient for X in diagnostic function

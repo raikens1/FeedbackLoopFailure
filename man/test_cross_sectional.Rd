@@ -4,12 +4,22 @@
 \alias{test_cross_sectional}
 \title{Test Cross-sectional dataset}
 \usage{
-test_cross_sectional(df, theta = c(-12, 20, -3))
+test_cross_sectional(
+  df,
+  theta = c(-12, 20, -3),
+  sensitivity = 1,
+  specificity = 1
+)
 }
 \arguments{
 \item{df}{cross-sectional dataset}
 
-\item{theta, }{parameters for diagnosis function}
+\item{theta, }{specification for diagnosis function.  If "truth", p_diagnose
+is the true probability that the individual has the disease given X and R}
+
+\item{sensitivity}{sensitivity of test (true positive rate)}
+
+\item{specificity}{specificity of test (true negative rate)}
 }
 \value{
 diagnosed cross_sectional data set.

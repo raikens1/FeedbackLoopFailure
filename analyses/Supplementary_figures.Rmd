@@ -1,16 +1,24 @@
 ---
-title: "Supplementary Materials"
-author: "Rachael Caelie (Rocky) Aikens"
-output: pdf_document
+title: "Web Appendix"
+author: "Aikens, Baiocchi, Chen, and Simard"
+output:
+    pdf_document:
+      toc: true
+      toc_depth: 2
+header-includes:  \setcounter{table}{0}  
+  \renewcommand{\thetable}{S\arabic{table}} 
+  \setcounter{figure}{0} 
+  \renewcommand{\thefigure}{S\arabic{figure}}
 ---
 
 ```{r setup, warning=FALSE, message = FALSE, include = FALSE}
-knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE, fig.align = "center", fig.height = 3)
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE, fig.align = "center", fig.height = 3, cache = FALSE)
 library(confirmationBias)
 library(tidyverse)
 library(ggpubr)
 library(knitr)
 library(binom)
+library(kableExtra)
 library(formattable)
 library(RColorBrewer)
 
@@ -37,176 +45,383 @@ x1_color <- "#377EB8" # Blue
 x.labs = c("FALSE" = "X = 0", "TRUE" = "X = 1")
 
 N <- 100000
+NSIM <- 1000
 ```
 
-# Simulation Set-Up
+\pagebreak
 
-**TODO** put simulation set-up materials here (specifically more detail on the longitudinal simulations.)
+# Simulation Methods: Additional Detail
+
+## Simulated Case Studies
+
+This section gives further detail on the simulation settings for the simulated case studies which consider naive analyses of medical datasets.
+
+### Disease model
+
+Let $i = 1,... 100,000$ index over all individuals in a cohort.  We describe each individual by an underlying disease state, $Z_i$, a quantity, $R_i$, summarizing the representativeness of their symptoms, and (except in Case 1), a background characteristic $X_i$. (Note that the notation for the underlying disease state, $Z_i$, is dropped in the main text for simplicity.) Let $Z_i = 1$ denote that individual $i$ has the disease in question, and otherwise let $Z_i = 0$. As summarized in the main text, $R_i$ varies continuously from 0 to 1, with a value of 0 indicating no resemblence to a "classic presentation" of the disease and 1 representing a "classic presentation." Where applicable, $X_i$ is binary.
+
+In Case 1, individual variables are simulated as follows:
+
+\begin{align*}
+    Z_i &\sim_{iid} \text{Bernoulli}(0.1)\\
+    R_i|Z_i = 1 &\sim_{iid} \text{Beta}(5, 2.5)\\
+    R_i|Z_i = 0 &\sim_{iid} \text{Beta}(1, 5)
+\end{align*}
+
+That is, the disease arises in 10% of individuals, and individuals with the disease tend to have more representative symptoms than those who do not, with some exceptions in both directions.
+
+In Cases 2 and 3, we additionally simulatethe background characteristic, $X$:
+
+$$X_i \sim_{iid} \text{Bernoulli}(0.5).$$
+In Case 2A, $X_i$ is independent of $Z_i$ and $R_i$, which are simulated in the same way as in the Case 1 set-up, above. In Case 2B, we further adjust the simulation so that $X_i = 1$ doubles disease risk compared to $X_i = 0:$
+
+\begin{align*}
+    Z_i|X_i = 0 &\sim_{iid} \text{Bernoulli}(0.075)\\
+    Z_i|X_i = 1 &\sim_{iid} \text{Bernoulli}(0.15)
+\end{align*}
+
+Finally, in Case 3, $X_i$ has no influence on the risk of disease ($X_i$ and $Z_i$ are independent), but each individual's value of $X_i$ determines the distribution of symptoms.  The setting is as follows:
+
+\begin{align*}
+    Z_i &\sim_{iid} \text{Bernoulli}(0.1)\\
+    R_i|Z_i = 1, X_i = 0 &\sim_{iid} \text{Beta}(5, 2.5)\\
+    R_i|Z_i = 1, X_i = 1 &\sim_{iid} \text{Beta}(5, 2)\\
+    R_i|Z_i = 0 &\sim_{iid} \text{Beta}(1, 5).
+\end{align*}
+
+
+### Clinical Selection Process
+
+The models for the probability of evaluation for each case are shown visually in figure 2 from the main text.  Here we give the exact formulae. Except in Case 2B, the probability of evaluation given representativeness, $R_i$ (and possibly $X_i$) is given based on a sigmoid function. For Case 1 and Case 3, this function is:
+
+$$P(\text{evaluation}| R_i) = \frac{1}{1 + exp(-(\beta_0 + \beta_1R_i))} - c,$$
+Where $\beta_1 = 20$ and $\beta_0 = -12$. Here, $c = \frac{1}{1 + exp(-\beta_0)}$ is a corrective constant to ensure that $P(\text{evaluation}| R_i) = 0$.
+
+In Case 2, probability of evaluation additionally depends on $X_i$.  For Case 2A, this is also a sigmoid curve:
+
+$$P(\text{evaluation}| R_i, X_i) = \frac{1}{1 + exp(-(\beta_0 + \beta_1R_i + \beta_2X_i))} - c_{x_i},$$
+In Case 2A, $\beta_0 = -13$, $\beta_1 = 20$, and $\beta_2 = -3$. The constant, $c_{x_i} = \frac{1}{1 + exp(-(\beta_0 + \beta_2X_i))}$ is again a corrective constant to ensure that $P(\text{evaluated}| R_i(t), X_i) = 0$.  Note that $c_{x_i}$ depends on $\beta_0$, $\beta_1$, $\beta_2$, and $X_i$.
+
+In Case 2B, we suppose that the probability of evaluation is precisely the "disease risk" of the patient based on their values of $R$ and $X$.  That is,
+
+$$P(\text{evaluation}| R_i, X_i) = P(Z_i = 1| R_i, X_i),$$
+Where the right hand side is derived directly from the simulation set-up. For the Case 2B set-up this is:
+
+$$P(\text{evaluation}| R_i, X_i) = \frac{Beta_{5, 2.5}(R_i)P(Z_i = 1|X_i)}{Beta_{5, 2.5}(R_i)P(Z_i = 1|X_i) + Beta_{1, 5}(R_i)P(Z_i = 0|X_i)},$$
+
+where $Beta_{a,b}$ represents the p.d.f of a Beta distribution with parameters $a$ and $b$. Note that $P(Z_i = 1|X_i)$ is precisely the true incidence of disease in the $X_i$ group, and $P(Z_i = 0|X_i)$ is one minus that incidence.
+
+A derivation is as follows:
+
+\begin{align*}
+    P(Z = 1 | R = r, X = x) &= \frac{P(R = r | Z = 1, X = x)P(Z = 1|X = x)}{P(R = r|X = x)} \\
+    &= \frac{P(R = r | Z = 1)P(Z = 1|X = x)}{P(R = r|Z = 1)P(Z = 1|X = x) + P(R = r|Z = 0)P(Z = 0|X = x)}\\
+    &= \frac{Beta_{5, 2.5}(r)P(Z = 1|X = x)}{Beta_{5, 2.5}(r)P(Z = 1|X = x) + Beta_{1, 5}(r)P(Z = 0|X = x)}.
+\end{align*}
+
+\pagebreak
+
+## Longitudinal simulation setting
+
+This section contains further detail on the data-generation for the longitudinal simulation example.
+
+### Disease model
+
+In the longitudinal setting, we simulate a set of disease cases which become more severe over time.  In this scenario, we additionally simulate a quantity, $S$, denoting the severity of the disease.  Like $R$, $S$ varies continuously from 0 to 1, with $S = 0$ meaning no severity and $S = 1$ meaning maximum severity.  In this supplement, we use slightly different notation for $R$ and $S$. Since these two quantities vary over time in the longitudinal simulations, we denote them as functions of time, $t$. Thus, $R_i(t)$ denotes the representativeness of the symptims of individual $i$ at time $t$, and likewise for $S_i(t)$.  We consider increments of time, $t$ from 0 to 1,00.
+
+Severity progresses from 0 to 1 according to a sigmoid function with the following parameters: 
+
+$$S_i(t) = \frac{1}{1 + e^{-\beta_i(t - T_i)}}.$$
+Here, $\beta_i$ and $T_i$ are disease-progression parameters intrinsic to the individual:
+
+\begin{itemize}
+  \item $\beta_i$ is the slope of progression. A larger $\beta_i$ indicates a quickly progressing disease.
+  \item $T_i$ controlls the time of onset.  $T_i$ is the time when severity reaches $0.5$
+\end{itemize}
+
+We simulate $\beta_i$ and $T_i$ from the following distributions:
+
+\begin{align*}
+\beta_i &\sim_{iid} \text{Beta}(\alpha = 2, \beta = 6)\\
+T_i &\sim_{iid} \text{Normal}(\mu = 50, \sigma = 5)
+\end{align*}
+
+This means that most people have a gradual disease progression ($\mathbb{E}[\beta_i] = 0.25$), and the disease tends to hit intermediate severity at about $t = 50$ ($\mathbb{E}[T_i] = 50$).  Note that $T_i$ and $\beta_i$ are generated from the same distribution regardless of the background characteristic, $X_i$.  This means that the disease _progression_ is not systematically different between $X$ groups (although it does not necessitate that the disease _incidences_ are the same between these groups).
+
+Individuals are diagnosed not based on severity but on representativeness of their symptoms. In this setting, we denote representativeness as a function of time, $R_i(t)$ (although the function notation is dropped in the main text). Underlying severity is related to -- but not the same as -- symptom representativeness. Severity, $S_i(t)$, describes the underlying disease state, while representativeness, $R_i(t)$, describes the observable symptoms and how well they match a "textbook" description of the disease.  For the longitudinal simulation _only_, we simulate $R_i(t)$ as a more noisy version of $S_i(t)$:
+
+$$R_i(t) = \frac{1}{1 + e^{-\beta_i(t + \epsilon_{ti} - T_i)}}.$$
+Where 
+$$\epsilon_{ti} \sim_{iid} N(0, 1).$$
+
+Inessense, this means that representativeness at any time corresponds roughly to severity, but that this relationship is staggered with some noise.
+
+### Clinical selection process
+
+At each time-point, $t$, each individual has an opportunity to be selected for diagnostic evaluation based on the representativeness of their symptoms. As in Cases 1-3, if the individual is selected for diagnostic evaluation, they recieve a diagnosis; otherwise they remain diagnosed (at least until the next time point). The probability of being selected for diagnostic evaluation at any given time point is the same as in Case 2A:
+
+$$P(\text{evaluation}| R_i(t), X_i) = \frac{1}{1 + exp(-(\beta_0 + \beta_1R_i(t) + \beta_2X_i))} - c_{x_i},$$
+where $\beta_0 = -13$, $\beta_1 = 20$, and $\beta_2 = -3$. As before $c_{x_i} = \frac{1}{1 + exp(-(\beta_0 + \beta_2X_i))}$ is a corrective constant to ensure that $P(\text{evaluated}| R_i(t), X_i) = 0$. 
 
 \pagebreak
 
 # Supplementary Figures
 
-```{r density plots, fig.width=8, fig.height=6, fig.cap = "Probability densities used to simulate representativeness for Cases 1 and 2 (A) and Case 3 (B)"}
+```{r fig.height=3.5, fig.cap="Visualization of clinical selection process model for Case 2B.  (Right) Probability of evaulation given R and X for Case 2B (`true risk factor').  Note that while the form of the curve may appear logistic, it is not (see supplementary additional detail for clinical selection process, Cases 1-3).  (Left) Relative probability of evaluation in Case 2B model for invividuals with X = 1 vs X = 0 for different levels of R.  When R is low (symptoms are not very representative of the disease), people with X = 1 are more than twice as likely to have the disease (and thus more than twice as likely to be evaluated) than people with X = 0.  As R increases, the relative rates o evaluation converge.  When R is close to 1 (symptoms are highly representative of the disease), the likelihood of disease is close to 1 in both groups, so the relative difference in likelihood of disease converges to 0.  That is, for more representative cases, X is less informative to likelihood of disease."}
 R <- seq(0, 1, length.out = 10000)
 
-case1_betas <- tibble(representativeness = c(R, R),
-                      density = c(dbeta(R, 5, 2.5), dbeta(R, 1, 5)),
-                      disease = as.logical(c(rep(1, 10000), rep(0, 10000))))
+a <- expand.grid(R, c(0,1)) %>%
+  rename(R = Var1, X = Var2) %>%
+  mutate(phi = diagnosis_fn(R, X, theta = "truth")) %>%
+  mutate(X = as.factor(X)) %>%
+  ggplot(aes(x = R, y = phi, group = X, color = X)) +
+  geom_line(size = 1.1) +
+  xlim(c(0,1)) +
+  ylim(c(0,1)) +
+  coord_fixed() +
+  scale_color_brewer(palette = "Set1", labels = c("X = 0", "X = 1")) +
+  ylab("P(Evaluated | R, X)") +
+  theme(legend.title = element_blank())
 
-case1_density <- ggplot(case1_betas, aes(x = representativeness, y = density,
-                                         fill = disease, group = disease,
-                                         color = disease, alpha = disease)) +
-  geom_line() + 
-  geom_area(position = "identity") +
-  scale_fill_manual(values = c(controls_color, cases_color), labels = c("No disease   ", "Disease")) +
-  scale_color_manual(values = c(controls_color, cases_color), labels = c("No disease   ", "Disease")) +
-  scale_alpha_manual(values = c(0.5, 0.5), labels = c("No disease   ", "Disease")) +
-  ggtitle("Case 1, Case 2 (A and B)") + 
-  theme(legend.position = "right", legend.title = element_blank()) +
-  xlab("Representativeness") +
-  ylab("Density") +
-  scale_x_continuous(expand = c(0.025, 0))
 
-case3_betas <- tibble(representativeness = c(R, R, R),
-                      density = c(dbeta(R, 1, 5), dbeta(R, 5, 4), dbeta(R, 5, 2.5)),
-                      status = c(rep("No disease", 10000), rep("Disease, X = 0", 10000), rep("Disease, X = 1", 10000))) %>%
-  mutate(status = factor(status, levels = c("No disease", "Disease, X = 0", "Disease, X = 1")))
+b <- tibble(R) %>%
+  mutate(phi = diagnosis_fn(R, 1, theta = "truth")/diagnosis_fn(R, 0, theta = "truth")) %>%
+  ggplot(aes(x = R, y = phi)) +
+  geom_line(size = 1.1) +
+  xlim(c(0,1)) +
+  ylab("Relative probability of evaluation\nX = 1 vs X = 0") +
+  theme(legend.title = element_blank())
 
-case3_density <- ggplot(case3_betas, aes(x = representativeness, y = density,
-                                         fill = status, group = status,
-                                         color = status, alpha = status)) +
-  geom_line() + 
-  geom_area(position = "identity") +
-  scale_fill_manual(values = c(controls_color, x0_color, x1_color)) +
-  scale_color_manual(values = c(controls_color, x0_color, x1_color)) +
-  scale_alpha_manual(values = c(0.4, 0.4, 0.4)) +
-  ggtitle("Case 3") + 
-  theme(legend.position = "right", legend.title = element_blank()) +
-  xlab("Representativeness") +
-  ylab("Density") +
-  scale_x_continuous(expand = c(0.025, 0))
-
-ggarrange(case1_density, case3_density, ncol = 1, nrow = 2, common.legend = F,  legend = "right", labels = "AUTO")
+ggarrange(a, b, ncol = 2, common.legend = T, legend = "bottom")
 ```
 
 
-```{r fig.width=8, fig.height=4.5}
-df_model <- generate_cs_beta(prevalence = c(0.075, 0.15), n = N)
+```{r}
+df <- generate_cs_beta(n = N, prevalence = 0.1)
+```
 
-good_model <- glm(disease ~ representativeness + x, data = df_model, family = binomial())
+```{r}
+df_tested <- test_cross_sectional(df, theta = c(-13, 20, 3), sensitivity = 0.7, specificity = 0.7)
+```
 
-theta_start <- coef(good_model)
+```{r fig.height=3, fig.width=3}
+df_x1 <- filter(df_tested, x == 1)
+df_x0 <- filter(df_tested, x == 0)
 
-df <- generate_cs_beta(N, prevalence = 0.1)
+plt_data_under <- rbind(binom.confint(sum(df_x1$diagnose), dim(df_x1)[1], method = "asymptotic"), 
+      binom.confint(sum(df_x0$diagnose), dim(df_x0)[1], method = "asymptotic"),
+      binom.confint(sum(df_x1$disease), dim(df_x1)[1], method = "asymptotic"),
+      binom.confint(sum(df_x0$disease), dim(df_x0)[1], method = "asymptotic")) %>%
+  rename(diagnosed = x, Incidence = mean) %>%
+  mutate(x = as.factor(c(1, 0, 1, 0)),
+        status = c("Observed", "Observed", "Actual", "Actual")) 
 
-df_tested <- test_cross_sectional(df, theta = c(-13, 20, 3)) %>%
-  mutate(status = case_when(!disease ~ "No disease",
-                            !x ~ "Disease, X = 0   ",
-                            x ~ "Disease, X = 1"),
-         obs_status = case_when(!diagnosed ~ "No diagnosis",
-                                !x ~ "Diagnosis, X = 0",
-                                x ~ "Diagnosis, X = 1")) %>%
-  mutate(status = factor(status, levels = c("No disease", "Disease, X = 0   ", "Disease, X = 1")),
-         obs_status = factor(obs_status, levels = c("No diagnosis", "Diagnosis, X = 0", "Diagnosis, X = 1")))
+plt_data_under[3:4,5:6] <- NA
 
-case2A_actual <- ggplot(df_tested, aes(x = representativeness, fill = status, group = status, color = status, alpha = status)) +
-  geom_density() + 
-  scale_fill_manual(values = c(controls_color, x0_color, x1_color)) +
-  scale_color_manual(values = c(controls_color, x0_color, x1_color)) +
-  scale_alpha_manual(values = c(0.4, 0.4, 0.4)) +
-  ggtitle("Case 2A: Disease vs no disease") + 
-  theme(legend.position = "right", legend.title = element_blank(),
-        plot.title = element_text(size = 10)) +
-  xlab("Representativeness") +
-  ylab("Density") +
-  scale_x_continuous(expand = c(0.025, 0))
+plt_data_over <- plt_data_under
 
-case2A_observed <- ggplot(df_tested, aes(x = representativeness, fill = obs_status, group = obs_status, color = obs_status, alpha = obs_status)) +
-  geom_density() + 
-  scale_fill_manual(values = c(undiagnosed_color, x0_color, x1_color)) +
-  scale_color_manual(values = c(undiagnosed_color, x0_color, x1_color)) +
-  scale_alpha_manual(values = c(0.5, 0.85, 0.85)) +
-  ggtitle("Case 2A: Diagnosis vs no diagnosis") +
-  theme(legend.position = "right", legend.title = element_blank(),
-        plot.title = element_text(size = 10))  +
-  xlab("Representativeness")+
-  ylab("Density") +
-  scale_x_continuous(expand = c(0.025, 0))
+plt_data_over[1:2, 4] <- df_tested %>%
+  group_by(x) %>%
+  mutate(TP = diagnosed & disease) %>%
+  summarize(Incidence = mean(TP)) %>%
+  arrange(desc(x)) %>%
+  pull(Incidence)
 
+plt_data_under[3:4, 4] <- 0
+
+case2a_incidence <- ggplot(plt_data_under, aes(x = status, y = Incidence, fill = x, group = x, alpha = status)) +
+  geom_col(position = position_dodge(width = 1), fill = controls_color) +
+  geom_col(data = plt_data_over, aes(x = status, y = Incidence, fill = x, group = x, alpha = status), position = position_dodge(width = 1)) +
+  geom_errorbar(aes(ymin = lower, ymax = upper), width = 0.25, position = position_dodge(width = 1)) +
+  xlab("")+
+  scale_alpha_manual(values = c(0.5, 1), guide = "none") + 
+  scale_fill_brewer(palette = "Set1", guide = "none") +
+  ylim(c(0,0.175))
+
+```
+
+```{r fig.height=3, fig.width=8}
+x.labs = c("FALSE" = "X = 0", "TRUE" = "X = 1")
+
+diseased <- df_tested %>% filter(disease == TRUE) %>%
+  mutate(group = "Individuals with Disease", alpha = 0.7, status = x)
+
+diagnosed <- df_tested %>% filter(diagnosed == TRUE) %>%
+  mutate(group = "Individuals Diagnosed", alpha = 1) %>%
+  mutate(status = as.factor(ifelse(!disease, 2, x)))
+
+case2a_rep <- ggplot(data = rbind(diseased, diagnosed), aes(x = representativeness, fill = status, group = status)) +
+  geom_histogram(data = diseased, alpha = 0.5, aes(x = representativeness, fill = status, group = status)) +
+  geom_histogram(data = diagnosed, aes(x = representativeness, fill = status, group = status)) +
+  labs(x = "Representativeness", y = "Number of individuals") +
+  scale_fill_manual(values = c(x0_color, x1_color, controls_color, x0_color, x1_color), drop = F) +
+  facet_wrap(~ x, labeller = labeller(x = x.labs)) +
+  theme(strip.text.x = element_text(size = 12, face = "bold"), panel.spacing = unit(1, "lines"))
+```
+
+```{r}
 df <- generate_cs_beta(prevalence = c(0.075, 0.15), n = N)
-
-df_tested <- test_cross_sectional(df, theta = theta_start) %>%
-  mutate(status = case_when(!disease ~ "No disease",
-                            !x ~ "Disease, X = 0   ",
-                            x ~ "Disease, X = 1"),
-         obs_status = case_when(!diagnosed ~ "No diagnosis",
-                                !x ~ "Diagnosis, X = 0",
-                                x ~ "Diagnosis, X = 1")) %>%
-  mutate(status = factor(status, levels = c("No disease", "Disease, X = 0   ", "Disease, X = 1")),
-         obs_status = factor(obs_status, levels = c("No diagnosis", "Diagnosis, X = 0", "Diagnosis, X = 1")))
-
-case2B_actual <- ggplot(df_tested, aes(x = representativeness, fill = status, group = status, color = status, alpha = status)) +
-  geom_density() + 
-  scale_fill_manual(values = c(controls_color, x0_color, x1_color)) +
-  scale_color_manual(values = c(controls_color, x0_color, x1_color)) +
-  scale_alpha_manual(values = c(0.4, 0.4, 0.4)) +
-  ggtitle("Case 2B: Disease vs no disease") + 
-  theme(legend.position = "right", legend.title = element_blank(),
-        plot.title = element_text(size = 10)) +
-  xlab("Representativeness") +
-  ylab("Density") +
-  scale_x_continuous(expand = c(0.025, 0))
-
-case2B_observed <- ggplot(df_tested, aes(x = representativeness, fill = obs_status, group = obs_status, color = obs_status, alpha = obs_status)) +
-  geom_density() + 
-  scale_fill_manual(values = c(undiagnosed_color, x0_color, x1_color)) +
-  scale_color_manual(values = c(undiagnosed_color, x0_color, x1_color)) +
-  scale_alpha_manual(values = c(0.5, 0.85, 0.85)) +
-  ggtitle("Case 2B: Diagnosis vs no diagnosis") +
-  theme(legend.position = "right", legend.title = element_blank(),
-        plot.title = element_text(size = 10))  +
-  xlab("Representativeness")+
-  ylab("Density") +
-  scale_x_continuous(expand = c(0.025, 0)) 
-
-df <- generate_cs_case3(n = N, prevalence = 0.1)
-df_tested <- test_cross_sectional(df, theta = c(-12, 20, 0)) %>%
-  mutate(status = case_when(!disease ~ "No disease",
-                            !x ~ "Disease, X = 0   ",
-                            x ~ "Disease, X = 1"),
-         obs_status = case_when(!diagnosed ~ "No diagnosis",
-                                !x ~ "Diagnosis, X = 0",
-                                x ~ "Diagnosis, X = 1")) %>%
-  mutate(status = factor(status, levels = c("No disease", "Disease, X = 0   ", "Disease, X = 1")),
-         obs_status = factor(obs_status, levels = c("No diagnosis", "Diagnosis, X = 0", "Diagnosis, X = 1")))
-
-case3_actual <- ggplot(df_tested, aes(x = representativeness, fill = status, group = status, color = status, alpha = status)) +
-  geom_density() + 
-  scale_fill_manual(values = c(controls_color, x0_color, x1_color)) +
-  scale_color_manual(values = c(controls_color, x0_color, x1_color)) +
-  scale_alpha_manual(values = c(0.4, 0.4, 0.4)) +
-  ggtitle("Case 3: Disease vs no disease") + 
-  theme(legend.position = "right", legend.title = element_blank(),
-        plot.title = element_text(size = 10)) +
-  xlab("Representativeness") +
-  ylab("Density") +
-  scale_x_continuous(expand = c(0.025, 0))
-
-case3_observed <- ggplot(df_tested, aes(x = representativeness, fill = obs_status, group = obs_status, color = obs_status, alpha = obs_status)) +
-  geom_density() + 
-  scale_fill_manual(values = c(undiagnosed_color, x0_color, x1_color)) +
-  scale_color_manual(values = c(undiagnosed_color, x0_color, x1_color)) +
-  scale_alpha_manual(values = c(0.5, 0.85, 0.85)) +
-  ggtitle("Case 3: Diagnosis vs no diagnosis") +
-  theme(legend.position = "right", legend.title = element_blank(),
-        plot.title = element_text(size = 10))  +
-  xlab("Representativeness")+
-  ylab("Density") +
-  scale_x_continuous(expand = c(0.025, 0))
-
-
-ggarrange(ggarrange(case2A_actual, case2B_actual, case3_actual, nrow = 1, ncol = 3, common.legend = TRUE, legend = "bottom"), 
-          ggarrange(case2A_observed, case2B_observed, case3_observed, nrow = 1, ncol = 3, common.legend = TRUE, legend = "bottom"),
-          ncol = 1, nrow = 2)
 ```
+
+```{r}
+df_tested <- test_cross_sectional(df, theta = "truth", sensitivity = 0.7, specificity = 0.7)
+```
+
+```{r fig.height=3, fig.width=3}
+df_x1 <- filter(df_tested, x == 1)
+df_x0 <- filter(df_tested, x == 0)
+
+plt_data_under <- rbind(binom.confint(sum(df_x1$diagnose), dim(df_x1)[1], method = "asymptotic"), 
+      binom.confint(sum(df_x0$diagnose), dim(df_x0)[1], method = "asymptotic"),
+      binom.confint(sum(df_x1$disease), dim(df_x1)[1], method = "asymptotic"),
+      binom.confint(sum(df_x0$disease), dim(df_x0)[1], method = "asymptotic")) %>%
+  rename(diagnosed = x, Incidence = mean) %>%
+  mutate(x = as.factor(c(1, 0, 1, 0)),
+        status = c("Observed", "Observed", "Actual", "Actual")) 
+
+plt_data_under[3:4,5:6] <- NA
+
+plt_data_over <- plt_data_under
+
+plt_data_over[1:2, 4] <- df_tested %>%
+  group_by(x) %>%
+  mutate(TP = diagnosed & disease) %>%
+  summarize(Incidence = mean(TP)) %>%
+  arrange(desc(x)) %>%
+  pull(Incidence)
+
+plt_data_under[3:4, 4] <- 0
+
+case2b_incidence <- ggplot(plt_data_under, aes(x = status, y = Incidence, fill = x, group = x, alpha = status)) +
+  geom_col(position = position_dodge(width = 1), fill = controls_color) +
+  geom_col(data = plt_data_over, aes(x = status, y = Incidence, fill = x, group = x, alpha = status), position = position_dodge(width = 1)) +
+  geom_errorbar(aes(ymin = lower, ymax = upper), width = 0.25, position = position_dodge(width = 1)) +
+  xlab("")+
+  scale_alpha_manual(values = c(0.5, 1), guide = "none") + 
+  scale_fill_brewer(palette = "Set1", guide = "none") +
+  ylim(c(0,0.175))
+```
+
+```{r fig.height=5.5, fig.width=8, fig.cap="Ground truth disease characteristics compared with a naive analysis in Cases 2A and 2B (`true risk factor' and `false risk facor', respectively) for a simulation in which the diagnostic evaluation has a sensitivity and specificity of 0.7. Observed incorrect diagnoses of non-diseased individuals with a false-positive evaluation result are shaded in green. In the `true risk factor' case (A), individuals in the X = 1 group are evaluated disproportionately more often. This means that a larger share of false positive diagnoses are present for the observed data in this group.  The false positive diagnoses tend to have less representative symptoms than the true positive diagnoses, distorting the distribution of observed cases. In this case, this distortion is more pronounced in the more-evaluated X = 1 group. (B) In the `false risk factor' case, the X = 0 group also includes a larger number of false positives, and false positives in both groups tend to fall on the lower end of the distribution of representativeness among diagnosed cases.  However, the probability of evaluation corresponds to true disease risk based on representativeness and X."}
+x.labs = c("FALSE" = "X = 0", "TRUE" = "X = 1")
+
+diseased <- df_tested %>% filter(disease == TRUE) %>%
+  mutate(group = "Individuals with Disease", alpha = 0.7, status = x)
+
+diagnosed <- df_tested %>% filter(diagnosed == TRUE) %>%
+  mutate(group = "Individuals Diagnosed", alpha = 1) %>%
+  mutate(status = as.factor(ifelse(!disease, 2, x)))
+
+case2b_rep <- ggplot(data = rbind(diseased, diagnosed), aes(x = representativeness, fill = status, group = status)) +
+  geom_histogram(data = diseased, alpha = 0.5, aes(x = representativeness, fill = status, group = status)) +
+  geom_histogram(data = diagnosed, aes(x = representativeness, fill = status, group = status)) +
+  labs(x = "Representativeness", y = "Number of individuals") +
+  scale_fill_manual(values = c(x0_color, x1_color, controls_color, x0_color, x1_color), drop = F) +
+  facet_wrap(~ x, scales = "free", labeller = labeller(x = x.labs)) +
+  theme(strip.text.x = element_text(size = 12, face = "bold"), panel.spacing = unit(1, "lines"))
+
+ggarrange(ggarrange(case2a_incidence, case2a_rep, ncol = 2, widths =c(2,3), legend = F), ggarrange(case2b_incidence, case2b_rep, ncol = 2, widths =c(2,3), legend = F), nrow = 2, labels = "AUTO")
+```
+
+\pagebreak
+
+# Supplementary Tables
+
+```{r}
+run_case2A <- function(se = 1, sp = 1){
+
+  df <- generate_cs_beta(n = N, prevalence = 0.1)
+
+  df_tested <- test_cross_sectional(df, theta = c(-13, 20, 3), sensitivity = se, specificity = sp)
+
+  df_tested %>% group_by(x) %>%
+      mutate(x = ifelse(x, "X1", "X0")) %>%
+      summarize(percent_cases_diagnosed = sum(diagnosed & disease)/sum(disease), est_incidence = sum(diagnosed)/n(), .groups = "drop") %>%
+      pivot_wider(names_from = x, values_from = c(percent_cases_diagnosed, est_incidence)) %>%
+      mutate(est_relative_incidence = est_incidence_X1/est_incidence_X0) 
+}
+```
+
+```{r, cache=TRUE}
+# Run small simulation study
+result_2A_se1_sp1 <- do.call("rbind", replicate(n = NSIM, run_case2A(se = 1, sp = 1), simplify = FALSE))
+result_2A_se1_sp07 <- do.call("rbind", replicate(n = NSIM, run_case2A(se = 1, sp = 0.7), simplify = FALSE))
+result_2A_se07_sp1 <- do.call("rbind", replicate(n = NSIM, run_case2A(se = 0.7, sp = 1), simplify = FALSE))
+result_2A_se07_sp07 <- do.call("rbind", replicate(n = NSIM, run_case2A(se = 0.7, sp = 0.7), simplify = FALSE))
+```
+
+```{r}
+mean_sd <- function(x){
+  if(mean(x) > 1){
+    sprintf('%0.2f (%0.3f)', mean(x), sd(x))
+  } else{
+      sprintf('%0.1f (%0.1f)', mean(x)*100, sd(x)*100)
+  }
+}
+```
+
+```{r}
+rbind(result_2A_se1_sp1, result_2A_se1_sp07, result_2A_se07_sp1, result_2A_se07_sp07) %>%
+  mutate(setting = c(rep(1, NSIM), rep(2, NSIM), rep(3, NSIM), rep(4, NSIM))) %>%
+  group_by(setting) %>%
+  summarize_all(mean_sd) %>%
+  mutate(sensitivity = c(1, 1, 0.7, 0.7), specificity = c(1, 0.7, 1, 0.7), .before = setting) %>%
+  select(-setting) %>%
+  knitr::kable("latex", booktabs = T, escape = F,
+               col.names = kableExtra::linebreak(c("Sensitivity", "Specificity",
+                                                   "Percent cases\ndiagnosed\n(X = 0)",
+                                                   "Percent cases\ndiagnosed\n(X = 1)",
+                                                   "Estimated\nincidence\n(X = 0)", 
+                                                   "Estimated\nincidence\n(X = 1)",
+                                                   "Estimated\nrelative incidence\n(X = 1 vs X = 0)")),
+               caption = "Average results from 1000 simulations of the Case 2A scenario with varying levels of evaluation sensitivity and specificity.  Values are presented as \"mean (standard deviation)\" calculated across simulations. Incidences are presented as percents. Note that the true incidences are 10 percent for both groups, and the true relative risk is 1.") %>%
+  kableExtra::kable_styling(latex_options = "hold_position")
+``` 
+
+<!-- When the only the specificity of the evaluation is low (high false positive rate), false positive diagnoses increase the estimated incidence in both groups compared to a scenario with a perfectly accurate evaluation.  However, the more-evaluated group (X = 1) has a disproportionate share of false positive diagnoses, resulting in greater overestimation of relative risk. When the evaluation has low sensitivity (high false negative rate), true disease cases are undiagnosed due to false negative evalation results, decreasing estimated incidence in both groups compared to a scenario with a perfectly accurate evaluation. An evaluation which is both low sensitivity and low specificity produces a more biased estimate of relative risk than any other scenario above. -->
+
+```{r}
+run_case2B <- function(se = 1, sp = 1){
+  
+  df <- generate_cs_beta(prevalence = c(0.075, 0.15), n = N)
+  
+  df_tested <- test_cross_sectional(df, theta = "truth",
+                                    sensitivity = se, specificity = sp)
+  
+  df_tested %>% group_by(x) %>%
+      mutate(x = ifelse(x, "X1", "X0")) %>%
+      summarize(percent_cases_diagnosed = sum(diagnosed & disease)/sum(disease),
+                est_incidence = sum(diagnosed)/n(), .groups = "drop") %>%
+      pivot_wider(names_from = x, values_from = c(percent_cases_diagnosed, est_incidence)) %>%
+      mutate(est_relative_incidence = est_incidence_X1/est_incidence_X0) 
+}
+```
+
+```{r cache=TRUE}
+# Run small simulation study
+result_2B_se1_sp1 <- do.call("rbind", replicate(n = NSIM, run_case2B(se = 1, sp = 1), simplify = FALSE))
+result_2B_se1_sp07 <- do.call("rbind", replicate(n = NSIM, run_case2B(se = 1, sp = 0.7), simplify = FALSE))
+result_2B_se07_sp1 <- do.call("rbind", replicate(n = NSIM, run_case2B(se = 0.7, sp = 1), simplify = FALSE))
+result_2B_se07_sp07 <- do.call("rbind", replicate(n = NSIM, run_case2B(se = 0.7, sp = 0.7), simplify = FALSE))
+```
+
+
+```{r}
+rbind(result_2B_se1_sp1, result_2B_se1_sp07, result_2B_se07_sp1, result_2B_se07_sp07) %>%
+  mutate(setting = c(rep(1, NSIM), rep(2, NSIM), rep(3, NSIM), rep(4, NSIM))) %>%
+  group_by(setting) %>%
+  summarize_all(mean_sd) %>%
+  mutate(sensitivity = c(1, 1, 0.7, 0.7), specificity = c(1, 0.7, 1, 0.7), .before = setting) %>%
+  select(-setting) %>%
+  knitr::kable("latex", booktabs = T, escape = F,
+               col.names = kableExtra::linebreak(c("Sensitivity", "Specificity",
+                                                   "Percent cases\ndiagnosed\n(X = 0)",
+                                                   "Percent cases\ndiagnosed\n(X = 1)",
+                                                   "Estimated\nincidence\n(X = 0)", 
+                                                   "Estimated\nincidence\n(X = 1)",
+                                                   "Estimated\nrelative incidence\n(X = 1 vs X = 0)")),
+               cap="Average results from 1000 simulations of the Case 2B scenario with varying levels of evaluation sensitivity and specificity.  Values are presented as \"mean (standard deviation)\" calculated across simulations. Incidences are presented as percents. Note that the true incidences are 7.5 percent for the X = 0 group and 15 for the X = 1 group, giving a true relative risk of 2.") %>%
+  kableExtra::kable_styling(latex_options = "hold_position")
+``` 
+
+<!-- When the only the specificity of the evaluation is low (high false positive rate), false positive diagnoses increase the estimated incidence in both groups compared to a scenario with a perfectly accurate evaluation.  In this scenario, perhaps because evaluation rates are in correspondence to true disease probabilities, the low specificity evaluation actually _reduces_ bias in the estimated relative risk compared to a scenario with a perfect test. When the evaluation has low sensitivity (high false negative rate), true disease cases are undiagnosed due to false negative evalation results, decreasing estimated incidence in both groups compared to a scenario with a perfectly accurate evaluation.  This appears not to strongly affect bias in estimation compared to a scenario with a perfect test. -->
