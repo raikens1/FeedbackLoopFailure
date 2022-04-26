@@ -14,4 +14,4 @@ Imports:
   magrittr (>= 1.5)
 Depends:
   R (>= 3.4.0)
-RoxygenNote: 7.1.0
+RoxygenNote: 7.1.2
