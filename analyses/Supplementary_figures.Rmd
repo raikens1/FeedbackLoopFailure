@@ -1,6 +1,6 @@
 ---
 title: "Web Appendix"
-author: "Aikens, Baiocchi, Chen, and Simard"
+author: "Scenarios for feedback loop failure in medical diagnosis"
 output:
     pdf_document:
       toc: true
@@ -326,6 +326,19 @@ ggarrange(ggarrange(case2a_incidence, case2a_rep, ncol = 2, widths =c(2,3), lege
 \pagebreak
 
 # Supplementary Tables
+
+```{r}
+# placeholder for figure 1s
+head(cars) %>% knitr::kable("latex", booktabs = T, escape = F,
+               cap="Average results from 1000 simulations of the Case 2B scenario with varying levels of evaluation sensitivity and specificity.  Values are presented as \"mean (standard deviation)\" calculated across simulations. Incidences are presented as percents. Note that the true incidences are 7.5 percent for the X = 0 group and 15 for the X = 1 group, giving a true relative risk of 2.") %>%
+  kableExtra::kable_styling(latex_options = "hold_position")
+```
+
+\pagebreak
+
+ placeholder 
+ 
+\pagebreak
 
 ```{r}
 run_case2A <- function(se = 1, sp = 1){

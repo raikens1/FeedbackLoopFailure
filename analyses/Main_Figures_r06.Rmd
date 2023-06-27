@@ -35,7 +35,7 @@ undiagnosed_color <- "#6A9C99"
 x0_color <- "#E41A1C" # Red
 x1_color <- "#377EB8" # Blue
 
-x.labs = c("FALSE" = "X = 0", "TRUE" = "X = 1")
+x.labs = c("FALSE" = "Demographic characteristic absent", "TRUE" = "X = 1")
 
 N <- 100000
 ```
@@ -63,12 +63,12 @@ We'll want a figure that shows the clinical selection process and the disease mo
 ```{r histograms, fig.height=4.5, fig.width=8}
 df <- generate_cs_beta(n = N) %>%
   mutate(status = case_when(!disease ~ "No disease",
-                            !x ~ "Disease, X = 0",
+                            !x ~ "Disease, Demographic characteristic absent",
                             x ~ "Disease, X = 1")) %>%
-  mutate(status = factor(status, levels = c("No disease", "Disease, X = 0", "Disease, X = 1"))) %>%
-  mutate(status_case1 = ifelse(!disease, "No disease", "Disease, both X = 0 and X = 1")) %>%
+  mutate(status = factor(status, levels = c("No disease", "Disease, Demographic characteristic absent", "Disease, X = 1"))) %>%
+  mutate(status_case1 = ifelse(!disease, "No disease", "Disease, both Demographic characteristic absent and X = 1")) %>%
   mutate(status_case1 = factor(status_case1,
-                               levels = c("No disease", "Disease, both X = 0 and X = 1", "Disease, X = 0", "Disease, X = 1")))
+                               levels = c("No disease", "Disease, both and X = 1", "Disease, Demographic characteristic absent", "Disease, X = 1")))
 
 
 case1_hist <- ggplot(df, aes(x = representativeness, y = stat(count), fill = status_case1, group = status_case1, color = status_case1, alpha = status_case1)) +
@@ -95,7 +95,7 @@ case1_hist <- ggplot(df, aes(x = representativeness, y = stat(count), fill = sta
 
 case2a_hist <- ggplot(df, aes(x = representativeness, fill = status, group = status, color = status, alpha = status)) +
   geom_histogram(dat = filter(df, status == "No disease"), position = "identity") + 
-  geom_histogram(dat = filter(df, status == "Disease, X = 0"), aes(x = representativeness, y = stat(count)* 10), position = "identity") +
+  geom_histogram(dat = filter(df, status == "Disease, demographic characteristic absent"), aes(x = representativeness, y = stat(count)* 10), position = "identity") +
   geom_histogram(dat = filter(df, status == "Disease, X = 1"), aes(x = representativeness, y = stat(count)* 10), position = "identity") +
   scale_fill_manual(values = c(controls_color, x0_color, x1_color), drop = FALSE) +
   scale_color_manual(values = c(controls_color, x0_color, x1_color), drop = FALSE) +
@@ -118,13 +118,13 @@ case2a_hist <- ggplot(df, aes(x = representativeness, fill = status, group = sta
 
 df <- generate_cs_beta(prevalence = c(0.075, 0.15), n = N) %>%
   mutate(status = case_when(!disease ~ "No disease",
-                            !x ~ "Disease, X = 0",
+                            !x ~ "Disease, demographic characteristic absent",
                             x ~ "Disease, X = 1")) %>%
-  mutate(status = factor(status, levels = c("No disease", "Disease, X = 0", "Disease, X = 1")))
+  mutate(status = factor(status, levels = c("No disease", "Disease, demographic characteristic absent", "Disease, X = 1")))
 
 case2b_hist <- ggplot(df, aes(x = representativeness, fill = status, group = status, color = status, alpha = status)) +
   geom_histogram(dat = filter(df, status == "No disease"), position = "identity") + 
-  geom_histogram(dat = filter(df, status == "Disease, X = 0"), aes(x = representativeness, y = stat(count)* 10), position = "identity") +
+  geom_histogram(dat = filter(df, status == "Disease, demographic characteristic absent"), aes(x = representativeness, y = stat(count)* 10), position = "identity") +
   geom_histogram(dat = filter(df, status == "Disease, X = 1"), aes(x = representativeness, y = stat(count)* 10), position = "identity") +
   scale_fill_manual(values = c(controls_color, x0_color, x1_color), drop = FALSE) +
   scale_color_manual(values = c(controls_color, x0_color, x1_color), drop = FALSE) +
@@ -147,13 +147,13 @@ case2b_hist <- ggplot(df, aes(x = representativeness, fill = status, group = sta
 
 df <- generate_cs_case3(n = N) %>%
   mutate(status = case_when(!disease ~ "No disease",
-                            !x ~ "Disease, X = 0",
+                            !x ~ "Disease, demographic characteristic absent",
                             x ~ "Disease, X = 1")) %>%
-  mutate(status = factor(status, levels = c("No disease", "Disease, X = 0", "Disease, X = 1")))
+  mutate(status = factor(status, levels = c("No disease", "Disease, demographic characteristic absent", "Disease, X = 1")))
 
 case3_hist <- ggplot(df, aes(x = representativeness, fill = status, group = status, color = status, alpha = status)) +
   geom_histogram(dat = filter(df, status == "No disease"), position = "identity") + 
-  geom_histogram(dat = filter(df, status == "Disease, X = 0"), aes(x = representativeness, y = stat(count)* 10), position = "identity") +
+  geom_histogram(dat = filter(df, status == "Disease, demographic characteristic absent"), aes(x = representativeness, y = stat(count)* 10), position = "identity") +
   geom_histogram(dat = filter(df, status == "Disease, X = 1"), aes(x = representativeness, y = stat(count)* 10), position = "identity") +
   scale_fill_manual(values = c(controls_color, x0_color, x1_color), drop = FALSE) +
   scale_color_manual(values = c(controls_color, x0_color, x1_color), drop = FALSE) +
@@ -183,7 +183,7 @@ R <- seq(0, 1, length.out = 10000)
 
 a <- data.frame(R = R, phi = diagnosis_fn(R, 0, theta = c(-12, 20, 0))) %>%
   mutate(X = "Both X = 0 and X = 1") %>%
-  mutate(X = factor(X, levels = c("Both X = 0 and X = 1", "X = 0", "X = 1"))) %>%
+  mutate(X = factor(X, levels = c("Both X = 0 and X = 1", "Demographic characteristic absent", "X = 1"))) %>%
   ggplot(aes(x = R, y = phi, color = X)) +
   geom_line(size = 1.1) +
   scale_color_manual(values = c(cases_color, x0_color, x1_color), drop = FALSE) +
@@ -203,7 +203,7 @@ b <- expand.grid(R, c(0,1)) %>%
   xlim(c(0,1)) +
   ylim(c(0,1)) +
   coord_fixed() +
-  scale_color_brewer(palette = "Set1", labels = c("X = 0", "X = 1")) +
+  scale_color_brewer(palette = "Set1", labels = c("demographic characteristic absent", "X = 1")) +
   ylab("P(Evaluated | R, X)") +
   ggtitle("Case 2A, Longitudinal") +
   theme(legend.title = element_blank())
@@ -218,7 +218,7 @@ c <- expand.grid(R, c(0,1)) %>%
   xlim(c(0,1)) +
   ylim(c(0,1)) +
   coord_fixed() +
-  scale_color_brewer(palette = "Set1", labels = c("X = 0", "X = 1")) +
+  scale_color_brewer(palette = "Set1", labels = c("demographic characteristic absent", "X = 1")) +
   ylab("P(Evaluated | R, X)") +
   ggtitle("Case 2B") +
   theme(legend.title = element_blank())
@@ -367,7 +367,7 @@ plt_data <- rbind(binom.confint(sum(df_x1$diagnose), dim(df_x1)[1], method = "as
   rename(diagnosed = x, Incidence = mean) %>%
   mutate(x = as.factor(c(1, 0, 1, 0)),
         status = c("Observed", "Observed", "Actual", "Actual")) %>%
-  mutate(x.status = c("X = 1, Diagnosed", "X = 0, Diagnosed", "X = 1, Disease", "X = 0, Disease"))
+  mutate(x.status = c("X = 1, Diagnosed", "Demographic characteristic absent, diagnosed", "X = 1, Disease", "Demographic characteristic absent, Disease"))
 
 plt_data[3:4,5:6] <- NA
 
@@ -547,7 +547,7 @@ plt_data <- rbind(binom.confint(sum(df_x1$diagnose), dim(df_x1)[1], method = "as
   rename(diagnosed = x, Incidence = mean) %>%
   mutate(x = as.factor(c(1, 0, 1, 0)),
         status = c("Observed", "Observed", "Actual", "Actual")) %>%
-  mutate(x.status = c("X = 1, Diagnosed", "X = 0, Diagnosed", "X = 1, Disease", "X = 0, Disease"))
+  mutate(x.status = c("X = 1, Diagnosed", "Demographic characteristic absent, diagnosed", "X = 1, Disease", "Demographic characteristic absent, Disease"))
 
 plt_data[3:4,5:6] <- NA
 
@@ -561,7 +561,7 @@ a <- ggplot(plt_data, aes(x = status, y = Incidence, fill = x.status, group = x,
 ```
 
 ```{r fig.height=3.25, fig.width=8}
-x.labs = c("FALSE" = "X = 0", "TRUE" = "X = 1")
+x.labs = c("FALSE" = "Demographic characteristic absent", "TRUE" = "X = 1")
 
 diseased <- df_tested %>% filter(disease == TRUE) %>%
   mutate(group = "Individuals with Disease", alpha = 0.7)
