@@ -8,3 +8,4 @@ analyses/*_files
 *_files
 analyses/archive/*
 *.pdf
+*.DS_Store
