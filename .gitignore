@@ -7,3 +7,4 @@ analyses/*_files
 *_cache
 *_files
 analyses/archive/*
+*.pdf
