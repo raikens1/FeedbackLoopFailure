@@ -1,11 +1,10 @@
-Package: confirmationBias
+Package: feedbackLoopFailure
 Type: Package
-Title: Underpinning code for a study of confirmation bias
+Title: Underpinning code for a study of feedback loop failure
 Version: 0.1.0
 Author: Rachael C. "Rocky" Aikens
 Maintainer: Rachael C. "Rocky" Aikens <rockyaikens@gmail.com>
-Description: More about what it does (maybe more than one line)
-    Use four spaces when indenting paragraphs within the Description.
+Description: See Aikens et al, Medical Decision Making
 License: GPL-3
 Encoding: UTF-8
 LazyData: true
