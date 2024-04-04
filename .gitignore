@@ -9,3 +9,4 @@ analyses/*_files
 analyses/archive/*
 *.pdf
 *.DS_Store
+analyses/figures/presentation_figures/*
