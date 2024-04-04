@@ -237,6 +237,7 @@ p <- ggarrange(ggarrange(case1_hist, case2a_hist, case2b_hist, case3_hist,
 p
 
 ggsave("figures/setup.pdf", p,  width=9, height=9)
+ggsave("figures/setup.png", p,  width=9, height=9, bg = "white", device = "png")
 ```
 
 # Results
@@ -341,6 +342,8 @@ p <- ggarrange(ggarrange(a, b, ncol = 2, nrow = 1, widths = c(3, 7), labels = "A
 
 ```{r}
 ggsave("figures/case1.pdf", p, width = 8, height = 7.5)
+
+ggsave("figures/case1.png", p, width = 8, height = 7.5, device = "png", bg = "white")
 ```
 
 ## Case 2
@@ -376,7 +379,7 @@ case2a_incidence <- ggplot(plt_data, aes(x = status, y = Incidence, fill = x.sta
   geom_errorbar(aes(ymin = lower, ymax = upper), width = 0.25, position = position_dodge(width = 1), show.legend = F) +
   xlab("")+
   scale_alpha_manual(name = "", values = c(1, 0.5, 1, 0.5)) + 
-  scale_fill_manual(name = "", values = c(x1_color, x1_color, x0_color, x0_color)) +
+  scale_fill_manual(name = "", values = c(x0_color, x0_color, x1_color, x1_color)) +
   ylim(c(0,0.175))+
   guides(fill=guide_legend(nrow=2,byrow=TRUE))
 ```
@@ -470,6 +473,7 @@ p <- ggarrange(case2a_incidence, case2a_rep,
           common.legend = T)
 
 ggsave("figures/case2.pdf", p, width = 8, height = 6)
+ggsave("figures/case2.png", p, width = 8, height = 6, device = "png", bg = "white")
 ```
 
 
@@ -561,7 +565,7 @@ a <- ggplot(plt_data, aes(x = status, y = Incidence, fill = x.status, group = x,
   geom_errorbar(aes(ymin = lower, ymax = upper), width = 0.25, position = position_dodge(width = 1), show.legend = F) +
   xlab("")+
   scale_alpha_manual(name = "", values = c(1, 0.5, 1, 0.5)) + 
-  scale_fill_manual(name = "", values = c(x1_color, x1_color, x0_color, x0_color)) +
+  scale_fill_manual(name = "", values = c(x0_color, x0_color, x1_color, x1_color)) +
   ylim(c(0,0.175))
 ```
 
@@ -585,6 +589,7 @@ b <- ggplot(plt_data, aes(x = representativeness, group = group, alpha = group, 
 p <- ggarrange(a, b, ncol = 2, widths =c(2,3), common.legend = TRUE)
 p
 ggsave("figures/case3.pdf", p, width = 8, height = 3.25)
+ggsave("figures/case3.png", p, width = 8, height = 3.25, device = "png", bg = "white")
 ```
 
 ## Longitudinal disease process
@@ -636,4 +641,5 @@ p <- ggplot(eg_diagnosed,
 
 ```{r}
 ggsave("figures/longitudinal.pdf", p, width = 5, height = 3)
+ggsave("figures/longitudinal.png", p, width = 5, height = 3, device = "png", bg = "white")
 ```
